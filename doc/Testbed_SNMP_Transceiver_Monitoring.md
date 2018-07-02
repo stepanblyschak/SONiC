@@ -43,5 +43,4 @@ This test case should verify that for each sensor found in Entity MIB we have an
 
 ## Test Flow Diagram
 --------------------
-
 ![alt text](https://github.com/stepanblyschak/SONiC/blob/SNMP_Transceiver_Monitoring_Testbed/images/SNMP_XCVR.svg)
