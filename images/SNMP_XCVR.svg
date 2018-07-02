@@ -153,9 +153,9 @@
 			<rect x="0" y="767.166" width="274.14" height="24.8337" class="st5"/>
 			<text x="4" y="776.88" class="st6" v:langID="1033"><v:paragraph/><v:tabList/>Create a list of Sensors filtering on entPhysicalDescription equals to <tspan
 						x="4" dy="1.2em" class="st12">SENSOR</tspan></text>		</g>
-		<g id="group32-41" transform="translate(69.7676,-72)" v:mID="32" v:groupContext="group">
+		<g id="group32-41" transform="translate(90,-72)" v:mID="32" v:groupContext="group">
 			<title>Sheet.32</title>
-			<g id="group28-42" transform="translate(114.998,-84.1476)" v:mID="28" v:groupContext="group">
+			<g id="group28-42" transform="translate(18,-84.1476)" v:mID="28" v:groupContext="group">
 				<v:userDefs>
 					<v:ud v:nameU="visVersion" v:prompt="" v:val="VT0(15):26"/>
 					<v:ud v:nameU="msvStructureType" v:prompt="" v:val="VT4(List)"/>
@@ -163,7 +163,7 @@
 				</v:userDefs>
 				<title>Alternative fragment.28</title>
 				<g id="shape28-43" v:mID="28" v:groupContext="groupContent">
-					<rect x="0" y="749.196" width="207.563" height="42.8036" class="st7"/>
+					<rect x="0" y="749.196" width="360" height="42.8036" class="st7"/>
 				</g>
 				<g id="shape29-45" v:mID="29" v:groupContext="shape" transform="translate(0,-25.2)">
 					<title>Sheet.29</title>
@@ -186,7 +186,7 @@
 					<path d="M0 792 L56.8 792 L64 784.8 L64 774.4 L0 774.4 L0 792 Z" class="st8"/>
 					<text x="4" y="785.6" class="st9" v:langID="1033"><v:paragraph/><v:tabList/>alt</text>				</g>
 			</g>
-			<g id="shape31-48" v:mID="31" v:groupContext="shape" transform="translate(31.6043,-93.6372)">
+			<g id="shape31-48" v:mID="31" v:groupContext="shape" transform="translate(21.272,-94.2818)">
 				<title>Interaction operand.31</title>
 				<desc>If sensor is not in Entity Sensor MIB - FAIL</desc>
 				<v:userDefs>
