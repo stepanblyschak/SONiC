@@ -40,7 +40,3 @@ This test case should verify that for each sensor found in Entity MIB we have an
 | **\#** | **Test Description** | **Expected Result** |
 |--------|----------------------|---------------------|
 | 1.     | for each item in $entity_mib_sensors check if there is a MIB entry in Entity Sensor MIB                     | All sensors in Entity MIB should have the an entry in Entity Sensor MIB                   |
-
-## Test Flow Diagram
---------------------
-![alt text](https://github.com/stepanblyschak/SONiC/blob/SNMP_Transceiver_Monitoring_Testbed/images/SNMP_XCVR.svg)
