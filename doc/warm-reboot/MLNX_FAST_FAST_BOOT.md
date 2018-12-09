@@ -70,7 +70,7 @@ Mellanox FFB is an implementation of system level warm reboot in SONiC for Mella
 # 2 Components changes
 
 ### 2.1 SDK
-Mellanox does not plan to break SDK upgrade in fastfast reboot frequently. But in rare cases in may happen. To be sure "warm-reboot" to new SDK is possible we need to expose SDK version string in SONiC image FS.
+In rare cases it may happen that ISSU reboot from SDK X to SDK Y is not supported. To be sure "warm-reboot" to new SDK is possible we need to expose SDK version string in SONiC image FS.
 SDK version will be exposed in ```/etc/mlnx/sdk_version```. This file will be generated at image build time.
 
 
