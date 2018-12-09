@@ -37,6 +37,8 @@ Mellanox FFB is an implementation of system level warm reboot in SONiC for Mella
 * DP downtime should be less than 1 sec
 * CP downtime should be the same as for FB flow - less than 90 sec
 
+<b>NOTE</b>: ACS-MSN2700 SKU will be issu enbled by default
+
 ## 1.2 Limitations
 * Port mapping configuration in SAI XML profile should match port_config.ini. Otherwise correct SDK/HW behavior is NOT guaranteed
 * In "warm boot enabled" mode half of resources (RIFs, Routes, ACLs, etc.) are available
