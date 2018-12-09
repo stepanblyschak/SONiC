@@ -21,9 +21,10 @@
 - [Open questions](#open-questions)
 ## List of Tables
 ###### Revision
-| Rev |     Date    |       Author          | Change Description                |
-|:---:|:-----------:|:---------------------:|-----------------------------------|
-| 0.2 |             | Stepan Blyshchak      | Initial version                   |
+| Rev |     Date    |       Author          | Change Description                      |
+|:---:|:-----------:|:---------------------:|-----------------------------------------|
+| 0.1 | 08 Oct 2018 | Stepan Blyshchak      | Initial version                         |
+| 0.2 | 10 Dec 2018 | Stepan Blyshchak      | Integration with system/swss warm reboot|
 ## About this Manual
 This document provides general information about the Mellanox fastfast boot feature implementation in SONiC.
 ## Scope
