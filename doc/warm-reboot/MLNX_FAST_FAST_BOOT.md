@@ -136,8 +136,11 @@ Two checks should be performed:
 * ASIC_DB, COUNTERS DB have to be fushed right after pre shutdown request is executed successfully.
   
 ### 3.1 Mellanox fast fast reboot flow 
+#### shutdown
 ![](https://github.com/stepanblyschak/SONiC/blob/fast-fast/doc/warm-reboot/img/mlnx_fastfast_boot_hld/fastfast-shutdown.svg)
 
+#### startup
+![](https://github.com/stepanblyschak/SONiC/blob/fast-fast/doc/warm-reboot/img/mlnx_fastfast_boot_hld/fastfast-startup.svg)
 
 # Open issues
 
