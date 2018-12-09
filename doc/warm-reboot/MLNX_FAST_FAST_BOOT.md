@@ -2,6 +2,23 @@
 # High Level Design Document
 ### Rev 0.2
 ## Table of Contents
+- [Overview](#1-overview)
+  * [Requirements](#11-requirements)
+  * [Limitations](#12-limitations)
+- [Components changes](#2-components-changes)
+   * [SDK](#21-sdk)
+   * [SAI](#22-sai)
+   * [warm boot status CLI command](#23-warm-boot-status-cli-command)
+   * [kernel boot parameter](#24-kernel-boot-parameter)
+   * [syncd](#25-syncd)
+   * [syncd_init_common.sh](#26-syncd_init_commonsh)
+   * [mlnx-ffb.sh](#27-mlnx-ffbsh)
+   * [warm-reboot](#28-warm-reboot)
+- [Mellanox fast fast reboot flow](#3-mellanox-fast-fast-reboot-flow)
+    * [shutdown](#31-shutdown)
+    * [startup](#31-startup)
+- [Traffic disruption](#4-traffic-disruption)
+- [Open questions](#open-questions)
 ## List of Tables
 ###### Revision
 | Rev |     Date    |       Author          | Change Description                |
@@ -105,7 +122,7 @@ In order to have a way to handle Mellanox warm reboot specifically a new kernel 
 SONIC_BOOT_TYPE=fastfast
 ```
 
-### 2.5 syncd changes
+### 2.5 syncd
 
 * The syncd daemon should handle new startup command line flag ```-t fastfast```.
 * When "fastfast" boot mode is specified syncd will ignore warm boot flag indication in redis DB and proceed as usual
@@ -113,7 +130,7 @@ SONIC_BOOT_TYPE=fastfast
 * On received APPLY_VIEW notification in "fastfast" mode syncd sets ```SAI_SWITCH_ATTR_FAST_API_ENABLE``` to ```false```
 This will notify Mellanox SDK that restoration phase is complete and it's time to switch to a "new" bank
 
-### 2.6 syncd_init_common.sh changes
+### 2.6 syncd_init_common.sh
 
 The syncd_init_common.sh should configure syncd to start in "fastfast" mode only if two below conditions are met:
 
