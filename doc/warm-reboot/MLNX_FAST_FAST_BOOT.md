@@ -29,7 +29,7 @@ Mellanox FFB is an implementation of system level warm reboot in SONiC for Mella
 
 <b>NOTE</b>: This flow is not relevant for the 0 sec down time.
 
-## Requirements
+## 1.1 Requirements
 * The FFB flow is issued by ```sudo warm-reboot``` CLI command on Mellanox platforms
   * On "warm boot enabled" SKUs - proceed with FFB flow
   * On "warm boot disabled" SKUs - return with appropriate error message
@@ -37,15 +37,15 @@ Mellanox FFB is an implementation of system level warm reboot in SONiC for Mella
 * DP downtime should be less than 1 sec
 * CP downtime should be the same as for FB flow - less than 90 sec
 
-## Limitations
-* Port mapping configuration in SAI XML profile should match port_config.ini. Otherwise correct SDK/HW behaviour is NOT guaranteed
+## 1.2 Limitations
+* Port mapping configuration in SAI XML profile should match port_config.ini. Otherwise correct SDK/HW behavior is NOT guaranteed
 * In "warm boot enabled" mode half of resources (RIFs, Routes, ACLs, etc.) are available
 * The solution is tailored for MSFT AZURE T0 configuration
 
 
 # 2 Components changes
 
-### 2.2 SDK
+### 2.1 SDK
 Mellanox does not plan to break SDK upgrade in fastfast reboot frequently. But in rare cases in may happen. To be sure "warm-reboot" to new SDK is possible we need to expose SDK version string in SONiC image FS.
 SDK version will be exposed in ```/etc/mlnx/sdk_version```. This file will be generated at image build time.
 
@@ -61,8 +61,8 @@ sonic-buildimage/platform/mellanox/sdk_version.j2:
 4.2.9108
 ```
 
-### 2.1 SAI
-SAI XML profile exposes a new node that indicates wheter SDK starts in "warm boot enabled" mode.
+### 2.2 SAI
+SAI XML profile exposes a new node that indicates whether SDK starts in "warm boot enabled" mode.
 E.g:
 ```xml
 <issu-enabled>1</issu-enabled>
@@ -72,7 +72,7 @@ SAI should handle ```SAI_BOOT_TYPE=1``` to handle warm start and start SDK in "f
 
 SAI should handle ```SAI_KEY_WARM_BOOT_WRITE_FILE``` value to tell where SDK can put persistent files for fastfast boot.
 
-SAI should hanlde next attributes:
+SAI should handle next attributes:
 
 | SAI Attributes | Description                                |
 |--------------------------|--------------------------------------------|
@@ -81,7 +81,7 @@ SAI should hanlde next attributes:
 | SAI_SWITCH_ATTR_FAST_API_ENABLE| Call SDK issu end API |
 
 
-## 2.2 warm boot status CLI command
+### 2.3 warm boot status CLI command
 A new platform specific show command in ```show``` commands group will be added in order to get whether SDK was started in "warm boot enabled" or normal mode
 
 This command will be used during FFB to check whether we can perform FFB.
@@ -93,17 +93,17 @@ admin@sonic:~ show platform mellanox issu status
 ENABLED
 ```
 
-The script will parse SAI XML profile to get the ISSU status node which is described in 2.1.
+The script will parse SAI XML profile to get the ISSU status node which is described in 2.2.
 
 The same approach uses Mellanox SDK Sniffer configuration.
 
-## 2.2 New kernel boot parameter
+### 2.4 kernel boot parameter
 In order to have a way to handle Mellanox warm reboot specifically a new kernel SONiC boot mode parameter will be introduced:
 ```
 SONIC_BOOT_TYPE=fastfast
 ```
 
-## 2.2 syncd changes
+### 2.5 syncd changes
 
 * The syncd daemon should handle new startup command line flag ```-t fastfast```.
 * When "fastfast" boot mode is specified syncd will ignore warm boot flag indication in redis DB and proceed as usual
@@ -111,21 +111,20 @@ SONIC_BOOT_TYPE=fastfast
 * On received APPLY_VIEW notification in "fastfast" mode syncd sets ```SAI_SWITCH_ATTR_FAST_API_ENABLE``` to ```false```
 This will notify Mellanox SDK that restoration phase is complete and it's time to switch to a "new" bank
 
-
-## 2.3 syncd_init_common.sh changes
+### 2.6 syncd_init_common.sh changes
 
 The syncd_init_common.sh should configure syncd to start in "fastfast" mode only if two below conditions are met:
 
 * Kernel boot parameter is SONIC_BOOT_TYPE=fastfast
 * /host/warmboot/warm-starting exists
 
-NOTE: Additional second condition is requiered because user can do "config reload" while kernel boot arguments remain the smae
+NOTE: Additional second condition is required because user can do "config reload" while kernel boot arguments remain the same
 
-## 2.4 mlnx-ffb.sh
+### 2.7 mlnx-ffb.sh
 
 The new script will live in /usr/bin/ and will contain a check function to be called in "warm-reboot" script
 
-## 2.5 warm-reboot
+### 2.8 warm-reboot
 
 warm-reboot script need handle two special flows for fastfast reboot:
 
@@ -133,14 +132,24 @@ warm-reboot script need handle two special flows for fastfast reboot:
 Two checks should be performed:
     * ISSU is enabled for this HWSKU
     * SDK upgrade is supported
-* ASIC_DB, COUNTERS DB have to be fushed right after pre shutdown request is executed successfully.
+* ASIC_DB, COUNTERS DB have to be flushed right after pre shutdown request is executed successfully.
   
-### 3.1 Mellanox fast fast reboot flow 
-#### shutdown
+## 3 Mellanox fast fast reboot flow 
+### 3.1 shutdown
 ![](https://github.com/stepanblyschak/SONiC/blob/fast-fast/doc/warm-reboot/img/mlnx_fastfast_boot_hld/fastfast-shutdown.svg)
 
-#### startup
+### 3.2 startup
 ![](https://github.com/stepanblyschak/SONiC/blob/fast-fast/doc/warm-reboot/img/mlnx_fastfast_boot_hld/fastfast-startup.svg)
+
+## 4 Traffic disruption
+
+Traffic is not affected during shutdown phase.
+
+Traffic is affected in two places on diagram
+* During startup, when orchagent restores configuration few milliseconds downtime is expected.
+* During ISSU end few hundreds of milliseconds downtime are expected.
+
+The sum of downtime periods is less then 1 second.
 
 # Open issues
 
