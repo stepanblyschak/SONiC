@@ -2,6 +2,10 @@
 # High Level Design Document
 ### Rev 0.2
 ## Table of Contents
+- [List of Tables](#list-of-tables)
+- [About this Manual](#about-this-manual)
+- [Scope](#scope)
+- [Definitions/Abbreviations](#definitionsabbreviation)
 - [Overview](#1-overview)
   * [Requirements](#11-requirements)
   * [Limitations](#12-limitations)
