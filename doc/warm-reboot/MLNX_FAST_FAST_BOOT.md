@@ -177,6 +177,4 @@ The sum of downtime periods is less then 1 second.
 
 # Open questions
 
-* Should we still use "fastfast" kernel boot parameter or use "warm"?
-
 ## 
