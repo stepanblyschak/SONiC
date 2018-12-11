@@ -98,11 +98,11 @@ SAI should handle ```SAI_KEY_WARM_BOOT_WRITE_FILE``` value to tell where SDK can
 
 SAI should handle next attributes:
 
-| SAI Attributes                    | Value        | Description             |
-|-----------------------------------|--------------|-------------------------|
-| SAI_SWITCH_ATTR_PRE_SHUTDOWN      | true         | Call SDK issu start API |
-| SAI_SWITCH_ATTR_RESTART_WARM      | true         | Ignore                  |
-| SAI_SWITCH_ATTR_FAST_API_ENABLE   | false        | Call SDK issu end API   |
+| SAI Attributes                    | Value              | Description                                |
+|-----------------------------------|--------------------|--------------------------------------------|
+| SAI_SWITCH_ATTR_PRE_SHUTDOWN      | true               | Call SDK issu start API                    |
+| SAI_SWITCH_ATTR_RESTART_WARM      | true/false         | Don't uninit dataplane on remove_switch()  |
+| SAI_SWITCH_ATTR_FAST_API_ENABLE   | false              | Call SDK issu end API                      |
 
 
 ### 2.3 warm boot status CLI command
