@@ -20,6 +20,21 @@
 - Upon user request the daemon should return the time left till the next arm. 
 In this case I am not sure if it is ok to have the value returned by a SW timer or from the HW watchdog. Need to clarify.
 
+```python
+def arm(self, seconds):
+        """
+        Arm the hardware watchdog with a timeout of <seconds> seconds.
+        If the watchdog is currently armed, calling this function will
+        simply reset the timer to the provided value. If the underlying
+        hardware does not support the value provided in <seconds>, this
+        method should arm the watchdog with the *next greater* available
+        value.
+        Returns:
+            An integer specifying the *actual* number of seconds the watchdog
+            was armed with. On failure returns -1.
+        """
+```
+
 ### DB ###
 #### State DB ####
 #### Watchdog table ####
