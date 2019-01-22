@@ -9,16 +9,6 @@
  | 0.1 |  01/21/2019           |      Stepan Blyshchak      | Initial version        |
  
 ### Requirements ###
--	Watchdog should not be armed automatically. It is the SW daemon responsibility to arm it. It will be done during init as well as every <b>X</b> seconds based on the timeout defined
-
-- It is the SW responsibility to re-am the watchdog. In the case it is not armed a restart should be performed by the HW watchdog and reboot reason should be set accordingly
-
-- Upon user request the daemon can disarm the watchdog 
-
-- Upon user request the daemon can set a new timeout. Once the timeout is set, the HW watchdog should be armed with the new value. Then every x time seconds based on the new timeout defined
-
-- Upon user request the daemon should return the time left till the next arm. 
-In this case I am not sure if it is ok to have the value returned by a SW timer or from the HW watchdog. Need to clarify.
 
 ```python
 def arm(self, seconds):
@@ -33,27 +23,28 @@ def arm(self, seconds):
             An integer specifying the *actual* number of seconds the watchdog
             was armed with. On failure returns -1.
         """
+    def disarm(self):
+        """
+        Disarm the hardware watchdog
+        Returns:
+            A boolean, True if watchdog is disarmed successfully, False if not
+        """
+
+    def is_armed(self):
+        """
+        Retrieves the armed state of the hardware watchdog.
+        Returns:
+            A boolean, True if watchdog is armed, False if not
+        """
+
+    def get_remaining_time(self):
+        """
+        If the watchdog is armed, retrieve the number of seconds remaining on
+        the watchdog timer
+        Returns:
+            An integer specifying the number of seconds remaining on thei
+            watchdog timer. If the watchdog is not armed, returns -1.
+        """
 ```
-
-### DB ###
-#### State DB ####
-#### Watchdog table ####
-
-	; Defines information for a watchdog
-	key                     = WATCHDOG_INFO                  ; information for the HW watchdog
-	; field                 = value
-	arm_status              = STRING                         ; Whether the HW WD is armed or not
-	timeout                 = STRING                         ; Configured HW WD timeout
-	expire_time             = STRING                         ; Expire time - how many seconds before HW WD expires
- 
-#### Config DB ####
-#### Watchdog daemon table ####
-
-	; Defines configuration for a watchdog daemon
-	key                     = WATCHDOG_INFO                  ; information for the HW watchdog
-	; field                 = value
-	arm_status              = STRING                         ; Whether the HW WD is armed or not
-	timeout                 = STRING                         ; Configured HW WD timeout
-	expire_time             = STRING                         ; Expire time - how many seconds before HW WD expires
 
 	
