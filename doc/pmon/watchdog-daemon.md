@@ -47,4 +47,16 @@ def arm(self, seconds):
         """
 ```
 
+### There are 2 types of HW CPLD watchdog implementations on Mellanox ###
+#### Type 1 (Spectrum based devices) ####
+
+- actual HW timeout can be defined as power of 2 msec.<p>
+<t>e.g. timeout 20 sec will be rounded up to 32768 msec.; maximum timeout period is 32 sec (32768 msec.);
+- get time-left isn't supported
+
+
+#### Type 2 (Spectrum-2 based devices) ####
+
+- actual HW timeout is defined in sec. and it's a same as user defined timeout; maximum timeout is 255 sec
+- get time-left is supported
 	
