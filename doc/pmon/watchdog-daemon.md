@@ -1,4 +1,4 @@
-# Watchdog daemon design #
+# Watchdog plugin on Mellanox platforms design #
 
 ### Rev 0.1 ###
 
