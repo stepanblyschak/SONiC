@@ -60,6 +60,10 @@ e.g. timeout 20 sec will be rounded up to 32768 msec.; maximum timeout period is
 
 - actual HW timeout is defined in sec. and it's a same as user defined timeout; maximum timeout is 255 sec
 - get time-left is supported
-	
+
+Common logic will be implemented in WatchdogImplBase class. WatchdogType1, WatchdogType2 inherit from WatchdogImplBase
+
+Based on which type is availbale in the system Watchdog class will delegate API calls to implementation classes WatchdogType1, WatchdogType2
+
 ### References ###
 1. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0120/recipes-kernel/linux/linux-4.9/0017-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch#L19
