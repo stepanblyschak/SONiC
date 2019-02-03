@@ -47,7 +47,8 @@ def arm(self, seconds):
         """
 ```
 
-### There are 2 types of HW CPLD watchdog implementations on Mellanox ###
+### There are 2 types of HW CPLD watchdog implementations on Mellanox [1] ###
+
 #### Type 1 (Spectrum based devices) ####
 
 - actual HW timeout can be defined as power of 2 msec;
@@ -60,3 +61,5 @@ e.g. timeout 20 sec will be rounded up to 32768 msec.; maximum timeout period is
 - actual HW timeout is defined in sec. and it's a same as user defined timeout; maximum timeout is 255 sec
 - get time-left is supported
 	
+### References ###
+1. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0120/recipes-kernel/linux/linux-4.9/0017-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch#L19
