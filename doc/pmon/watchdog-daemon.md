@@ -75,9 +75,9 @@ Based on which type is availbale in the system Chassis class inits WatchdogType1
 #### Flow diagram ####
 ![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/arm_seq.svg)
 
-Watchdog Type 1 should overwrite arm() and get_remaining_time()
+WatchdogType1 should overwrite arm() and get_remaining_time()
 
-arm() will save timestamp. get_remaining_time() will return (current_timestamp - arm_timestamp)
+arm() will save timestamp; get_remaining_time() will return (current_timestamp - arm_timestamp)
 
 ### References ###
 1. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0120/recipes-kernel/linux/linux-4.9/0017-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch#L19
