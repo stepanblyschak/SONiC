@@ -70,10 +70,10 @@ Because of Watchdog Type 1 does not support "get time-left" operation it should 
 Based on which type is availbale in the system Chassis class inits WatchdogType1 or WatchdogType2 object
 
 #### Class diagram ####
-<img src=https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_class_diagram.svg>
+![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_class_diagram.svg)
 
 #### Flow diagram ####
-<img src=https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/arm_seq.svg>
+![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/arm_seq.svg)
 
 Watchdog Type 1 should overwrite arm() and get_remaining_time()
 
