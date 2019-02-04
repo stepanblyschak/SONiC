@@ -72,6 +72,9 @@ Based on which type is availbale in the system Chassis class inits WatchdogType1
 #### Class diagram ####
 <img src=https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_class_diagram.svg>
 
+#### Flow diagram ####
+<img src=https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/arm_seq.svg>
+
 #### arm(timeout) ####
 ```
 if watchdog is currently armed:
