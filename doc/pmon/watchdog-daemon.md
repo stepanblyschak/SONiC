@@ -74,8 +74,11 @@ Based on which type is availbale in the system Chassis class inits WatchdogType1
 
 #### Flow diagram ####
 - WD is armed
+
 ![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm1.png)
+
 - WD is not armed
+
 ![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm2.png)
 
 WatchdogType1 should overwrite arm() and get_remaining_time()
