@@ -70,7 +70,7 @@ Because of Watchdog Type 1 does not support "get time-left" operation it should 
 Based on which type is availbale in the system Chassis class inits WatchdogType1 or WatchdogType2 object
 
 #### Class diagram ####
-![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_class_diagram.svg)
+![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_class_diagram.png)
 
 #### Flow diagram ####
 ![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/arm_seq.svg)
