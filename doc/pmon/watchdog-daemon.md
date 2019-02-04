@@ -66,6 +66,7 @@ WatchdogType1 overwrites arm() and get_remaining_time() methods
 
 Based on which type is availbale in the system Watchdog class will delegate API calls to implementation classes WatchdogType1, WatchdogType2
 
+### WatchdogImpl ###
 #### arm(timeout) ####
 ```
 if watchdog is currently armed:
@@ -100,5 +101,8 @@ if watchdog is currently armed:
 ```
 
 
+Watchdog Type 1 should overwrite arm() and get_remaining_time()
+
 ### References ###
 1. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0120/recipes-kernel/linux/linux-4.9/0017-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch#L19
+2. https://www.kernel.org/doc/Documentation/watchdog/watchdog-api.txt
