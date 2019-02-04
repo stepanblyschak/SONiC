@@ -75,40 +75,6 @@ Based on which type is availbale in the system Chassis class inits WatchdogType1
 #### Flow diagram ####
 <img src=https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/arm_seq.svg>
 
-#### arm(timeout) ####
-```
-if watchdog is currently armed:
-    if timeout != current_timeout:
-        WDIOS_DISABLECARD	ioctl
-        WDIOF_SETTIMEOUT	ioctl
-        WDIOS_ENABLECARD	ioctl
-    else:
-        WDIOC_KEEPALIVE	ioctl
-else:
-    if timeout != current_timeout:
-        WDIOF_SETTIMEOUT	ioctl
-    WDIOS_ENABLECARD	ioctl    
-```
-
-#### disarm() ####
-```
-if watchdog is currently armed:
-      WDIOS_DISABLECARD	ioctl
-```
-
-#### is_armed() ####
-```
-return armed_state
-```
-
-
-#### get_remaining_time() ####
-```
-if watchdog is currently armed:
-      WDIOC_GETTIMELEFT	ioctl
-```
-
-
 Watchdog Type 1 should overwrite arm() and get_remaining_time()
 
 arm() will save timestamp. get_remaining_time() will return (current_timestamp - arm_timestamp)
