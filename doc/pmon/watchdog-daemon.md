@@ -65,6 +65,15 @@ e.g. timeout 20 sec will be rounded up to 32768 msec.; maximum timeout period is
 
 Watchdog can be configured using <b>ioctl</b>
 
+| ioctl command | Param | Comment |
+|---------------|-------|---------|
+|WDIOC_KEEPALIVE| -| Ping watchdog
+|WDIOC_SETTIMEOUT| timeout| Set timeout, return is actual timeout
+|WDIOC_GETTIMEOUT| timeout| Get timeout
+|WDIOC_GETTIMELEFT| timeleft| Get timeleft
+|WDIOC_SETOPTIONS|WDIOS_DISABLECARD/WDIOS_ENABLECARD| Turn off/on watchdog
+
+
 Common logic will be implemented in WatchdogImplBase class. WatchdogType1, WatchdogType2 inherit from WatchdogImplBase.
 
 Because of Watchdog Type 1 does not support "get time-left" operation it should overwrite arm(), get_remaining_time() methods
