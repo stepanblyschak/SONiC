@@ -66,7 +66,7 @@ WatchdogType1 overwrites arm() and get_remaining_time() methods
 
 Based on which type is availbale in the system Watchdog class will delegate API calls to implementation classes WatchdogType1, WatchdogType2
 
-#### arm ####
+#### arm(timeout) ####
 ```
 if watchdog is currently armed:
     if timeout != current_timeout:
@@ -74,12 +74,31 @@ if watchdog is currently armed:
         WDIOF_SETTIMEOUT	ioctl
         WDIOS_ENABLECARD	ioctl
     else:
-        WDIOC_KEEPALIVE ioctl
+        WDIOC_KEEPALIVE	ioctl
 else:
     if timeout != current_timeout:
         WDIOF_SETTIMEOUT	ioctl
     WDIOS_ENABLECARD	ioctl    
 ```
+
+#### disarm() ####
+```
+if watchdog is currently armed:
+      WDIOS_DISABLECARD	ioctl
+```
+
+#### is_armed() ####
+```
+return armed_state
+```
+
+
+#### get_remaining_time() ####
+```
+if watchdog is currently armed:
+      WDIOC_GETTIMELEFT	ioctl
+```
+
 
 ### References ###
 1. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0120/recipes-kernel/linux/linux-4.9/0017-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch#L19
