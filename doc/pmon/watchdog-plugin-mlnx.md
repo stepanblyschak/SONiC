@@ -119,7 +119,8 @@ The watchdog daemon will call ```get_watchdog()``` to get watchdog object.
 
 ![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm2.png)
 
-On error set previous watchdog armed state and timeout
+- On error
+ - set previous watchdog armed state and timeout
 
 ### References ###
 1. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0120/recipes-kernel/linux/linux-4.9/0017-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch#L19
