@@ -108,7 +108,11 @@ Common logic for both will be implemented in ```WatchdogImplBase``` class that i
 
 Because of watchdog type 1 does not support "get time-left" operation it should overwrite arm(), get_remaining_time() methods to save the timestamp when watchdog was armed and use it to get remaining time based on current timeout.
 
-```Chassis``` object holds a reference to ```WatchdogBase```. On start it decides whether to create ```WatchdogType1``` or ```WatchdogType2```.
+```Chassis``` object holds a reference to ```WatchdogBase```. On start it decides whether to create ```WatchdogType1``` or ```WatchdogType2``` based on:
+- option 1: get SONiC platform name
+- option 2: check /sys/class/watchdog/watchdog0/timeleft existance for main watchdog
+
+The watchdog daemon will call ```get_watchdog()``` to get watchdog object.
 
 #### Arm flow diagram ####
 - WD is armed
