@@ -123,5 +123,6 @@ The watchdog daemon will call ```get_watchdog()``` to get watchdog object.
   - set previous watchdog armed state and timeout
 
 ### References ###
+0. https://github.com/Azure/sonic-platform-common/blob/master/sonic_platform_base/watchdog_base.py
 1. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0120/recipes-kernel/linux/linux-4.9/0017-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch#L19
 2. https://www.kernel.org/doc/Documentation/watchdog/watchdog-api.txt
