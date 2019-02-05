@@ -104,7 +104,7 @@ Based on which type is availbale in the system Chassis class inits WatchdogType1
 
 #### Class relations ####
 
-Common logic will be implemented in ```WatchdogImplBase``` class. ```WatchdogType1```, ```WatchdogType2``` inherit from ```WatchdogImplBase```.
+Common logic for both will be implemented in ```WatchdogImplBase``` class that implements ```WatchdogBase``` API. ```WatchdogType1```, ```WatchdogType2``` inherit from ```WatchdogImplBase```.
 
 Because of watchdog type 1 does not support "get time-left" operation it should overwrite arm(), get_remaining_time() methods to save the timestamp when watchdog was armed and use it to get remaining time based on current timeout.
 
