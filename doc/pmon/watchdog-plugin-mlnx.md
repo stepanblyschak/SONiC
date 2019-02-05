@@ -76,6 +76,8 @@ e.g. timeout 20 sec will be rounded up to 32768 msec.; maximum timeout period is
 - actual HW timeout is defined in sec. and it's a same as user defined timeout; maximum timeout is 255 sec
 - get time-left is supported
 
+There can be main and auxiliary watchdogs. Since API does not support multiple watchdogs we will focus on main watchdog.
+
 ### Watchdog Plugin implementation ###
 
 Watchdog can be configured using <b>ioctl</b>
@@ -88,6 +90,11 @@ Watchdog can be configured using <b>ioctl</b>
 |WDIOC_GETTIMELEFT| timeleft| Get timeleft
 |WDIOC_SETOPTIONS|WDIOS_DISABLECARD/WDIOS_ENABLECARD| Turn off/on watchdog
 
+NOTE: Since WDIOC_GETTIMELEFT is not supported on Type 1 and API does not assume it cannot be supported, get_remaining_time() for Type 1 will return time calculated in SW as:
+<p>
+
+```time_left = (current_timeout - (current_timestamp - arm_timestamp))```
+
 
 Common logic will be implemented in WatchdogImplBase class. WatchdogType1, WatchdogType2 inherit from WatchdogImplBase.
 
@@ -95,10 +102,15 @@ Because of Watchdog Type 1 does not support "get time-left" operation it should 
 
 Based on which type is availbale in the system Chassis class inits WatchdogType1 or WatchdogType2 object
 
-#### Class diagram ####
-![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_class_diagram.png)
+#### Class relations ####
 
-#### Flow diagram ####
+Common logic will be implemented in ```WatchdogImplBase``` class. ```WatchdogType1```, ```WatchdogType2``` inherit from ```WatchdogImplBase```.
+
+Because of watchdog type 1 does not support "get time-left" operation it should overwrite arm(), get_remaining_time() methods to save the timestamp when watchdog was armed and use it to get remaining time based on current timeout.
+
+```Chassis``` object holds a reference to ```WatchdogBase```. On start it decides whether to create ```WatchdogType1``` or ```WatchdogType2```.
+
+#### Arm flow diagram ####
 - WD is armed
 
 ![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm1.png)
@@ -106,10 +118,6 @@ Based on which type is availbale in the system Chassis class inits WatchdogType1
 - WD is not armed
 
 ![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm2.png)
-
-WatchdogType1 should overwrite arm() and get_remaining_time()
-
-arm() will save timestamp; get_remaining_time() will return (current_timeout - (current_timestamp - arm_timestamp))
 
 ### References ###
 1. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0120/recipes-kernel/linux/linux-4.9/0017-watchdog-mlx-wdt-introduce-watchdog-driver-for-Mella.patch#L19
