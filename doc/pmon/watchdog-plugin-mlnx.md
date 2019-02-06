@@ -80,10 +80,10 @@ There can be main and auxiliary watchdogs. Since API does not support multiple w
 
 ### Current assumptions ###
 
-- Watchdog daemon will arm the watchdog with <timeout> using ```arm(timeout)``` once on start
-- Call ```arm()``` passing the same value <timeout> in a loop every <interval> seconds
-- Watchdog daemon will not ignore ```arm()``` return value
-- If watchdog daemon needs to change timeout it can call ```arm(new_timeout)```
+- Watchdog daemon will arm the watchdog with "timeout" using ```arm(timeout)``` once on start
+- Call ```arm(timeout)``` passing the same value "timeout" in a loop every "interval" seconds
+- Watchdog daemon will not ignore ```arm(timeout)``` return value
+- If watchdog daemon needs to change timeout it can call ```arm(new_timeout)``` and keep pinging watchdog in a loop by calling ```arm(new_timeout)```
 
 ### Watchdog Plugin implementation ###
 
@@ -116,14 +116,16 @@ Because of ```WatchdogType1``` does not support "get_remaining_time" operation i
 ```Chassis``` object holds a reference to ```WatchdogBase```. On start it decides whether to create ```WatchdogType1``` or ```WatchdogType2```:
 
 ```Chassis``` object will list available watchdog devices in ```/dev/watchdog*``` and find the one with identity "mlnx-wdt-main" which is main Mellanox watchdog;
-Be checking ```/sys/class/watchdog/watchdog{wd_index}/timeleft``` existance ```Chassis``` can distinguish between Type 1 and Type 2 and create ```WatchdogType1``` or ```WatchdogType2``` object.
-If "mlnx-wd-main" is not available or error happened it set ```_watchdog``` variable to ```None```
+<p>
+By checking ```/sys/class/watchdog/watchdog{wd_index}/timeleft``` existance ```Chassis``` can distinguish between Type 1 and Type 2 and create ```WatchdogType1``` or ```WatchdogType2``` object.
+If "mlnx-wd-main" is not available or error happened it sets ```_watchdog``` variable to ```None```
+<p>
 
 The watchdog daemon will call ```get_watchdog()``` to get watchdog object.
 
 #### Arm flow diagram ####
 
-![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm.png)
+![](https://github.com/stepanblyschak/SONiC/blob/wd/images/pmon/mellanox/wd_arm.png)
 
 On error
   - set previous watchdog armed state and timeout
