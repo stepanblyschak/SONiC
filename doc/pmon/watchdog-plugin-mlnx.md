@@ -128,9 +128,6 @@ The watchdog daemon will call ```get_watchdog()``` to get watchdog object.
 
 ![](https://github.com/stepanblyschak/SONiC/blob/wd/images/pmon/mellanox/wd_arm.png)
 
-On error
-  - set previous watchdog armed state and timeout
-
 ### Open questions ###
 
 1. Could it be better to have seperate API to arm and ping watchdog?
