@@ -91,11 +91,11 @@ Plugin will use standard linux API to interact with watchdog using <b>ioctl</b> 
 
 | ioctl command     | Param                            | Comment                               | Supported by  |
 |-------------------|----------------------------------|---------------------------------------|---------------|
-|WDIOC_KEEPALIVE    | -                                | Ping watchdog                         | Type 1/Type 2 |
-|WDIOC_SETTIMEOUT   | timeout                          | Set timeout, return is actual timeout | Type 1/Type 2 |
-|WDIOC_GETTIMEOUT   | timeout                          | Get timeout                           | Type 1/Type 2 |
+|WDIOC_KEEPALIVE    | -                                | Ping watchdog                         | Type 1 & 2    |
+|WDIOC_SETTIMEOUT   | timeout                          | Set timeout, return is actual timeout | Type 1 & 2    |
+|WDIOC_GETTIMEOUT   | timeout                          | Get timeout                           | Type 1 & 2    |
 |WDIOC_GETTIMELEFT  | timeleft                         | Get timeleft                          | Type 2        |
-|WDIOC_SETOPTIONS   |WDIOS_DISABLECARD/WDIOS_ENABLECARD| Turn off/on watchdog                  | Type 1/Type 2 |
+|WDIOC_SETOPTIONS   |WDIOS_DISABLECARD/WDIOS_ENABLECARD| Turn off/on watchdog                  | Type 1 & 2    |
 
 <b>NOTE</b>: Since WDIOC_GETTIMELEFT is not supported on Type 1 and API does not assume it cannot be supported, get_remaining_time() for Type 1 will return time calculated using timestamps:
 <p>
@@ -124,11 +124,7 @@ The watchdog daemon will call ```get_watchdog()``` to get watchdog object.
 #### Arm flow diagram ####
 - WD is armed
 
-![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm1.png)
-
-- WD is not armed
-
-![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm2.png)
+![](https://github.com/stepanblyschak/SONiC/blob/wd/doc/pmon/wd_arm.png)
 
 - On error
   - set previous watchdog armed state and timeout
