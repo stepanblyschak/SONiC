@@ -64,49 +64,60 @@ class WatchdogBase:
 
 ### There are 2 types of HW CPLD watchdog implementations on Mellanox [1] ###
 
-#### Type 1 (Spectrum based devices) ####
+#### Type 1 ####
 
 - actual HW timeout can be defined as power of 2 msec;
 e.g. timeout 20 sec will be rounded up to 32768 msec.; maximum timeout period is 32 sec (32768 msec.);
 - get time-left isn't supported
 
 
-#### Type 2 (Spectrum-2 based devices) ####
+#### Type 2 ####
 
 - actual HW timeout is defined in sec. and it's a same as user defined timeout; maximum timeout is 255 sec
 - get time-left is supported
 
 There can be main and auxiliary watchdogs. Since API does not support multiple watchdogs we will focus on main watchdog.
 
+### Current assumptions ###
+
+- Watchdog daemon will arm the watchdog with <timeout> using ```arm(timeout)``` once on start
+- Call ```arm()``` passing the same value <timeout> in a loop every <interval> seconds
+- Watchdog daemon will not ignore ```arm()``` return value
+- If watchdog daemon needs to change timeout it can call ```arm(new_timeout)```
+
 ### Watchdog Plugin implementation ###
 
-Watchdog can be configured using <b>ioctl</b>
+Plugin will use standard linux API to interact with watchdog using <b>ioctl</b> commands:
 
-| ioctl command | Param | Comment |
-|---------------|-------|---------|
-|WDIOC_KEEPALIVE| -| Ping watchdog
-|WDIOC_SETTIMEOUT| timeout| Set timeout, return is actual timeout
-|WDIOC_GETTIMEOUT| timeout| Get timeout
-|WDIOC_GETTIMELEFT| timeleft| Get timeleft
-|WDIOC_SETOPTIONS|WDIOS_DISABLECARD/WDIOS_ENABLECARD| Turn off/on watchdog
+| ioctl command     | Param                            | Comment                               | Supported by  |
+|-------------------|----------------------------------|---------------------------------------|---------------|
+|WDIOC_KEEPALIVE    | -                                | Ping watchdog                         | Type 1/Type 2 |
+|WDIOC_SETTIMEOUT   | timeout                          | Set timeout, return is actual timeout | Type 1/Type 2 |
+|WDIOC_GETTIMEOUT   | timeout                          | Get timeout                           | Type 1/Type 2 |
+|WDIOC_GETTIMELEFT  | timeleft                         | Get timeleft                          | Type 2        |
+|WDIOC_SETOPTIONS   |WDIOS_DISABLECARD/WDIOS_ENABLECARD| Turn off/on watchdog                  | Type 1/Type 2 |
 
-NOTE: Since WDIOC_GETTIMELEFT is not supported on Type 1 and API does not assume it cannot be supported, get_remaining_time() for Type 1 will return time calculated in SW as:
+<b>NOTE</b>: Since WDIOC_GETTIMELEFT is not supported on Type 1 and API does not assume it cannot be supported, get_remaining_time() for Type 1 will return time calculated using timestamps:
 <p>
 
 ```time_left = (current_timeout - (current_timestamp - arm_timestamp))```
 
 #### Class relations ####
 
-Common logic for both will be implemented in ```WatchdogImplBase``` class that implements ```WatchdogBase``` API. 
+Common logic for both will be implemented in ```WatchdogImplBase``` class that implements ```WatchdogBase``` API.
 <p>
 
 ```WatchdogType1```, ```WatchdogType2``` inherit from ```WatchdogImplBase```.
 
-Because of ```WatchdogType1``` does not support "get_remaining_time" operation it should overwrite arm(), get_remaining_time() methods to save the timestamp when watchdog was armed and use it to get remaining time based on current timeout.
+Because of ```WatchdogType1``` does not support "get_remaining_time" operation it should overwrite arm(), get_remaining_time():
+ - arm(): call arm() from base class and save the timestamp into object member variable
+ - get_remaining_time(): Calculate time left using formula above
 
-```Chassis``` object holds a reference to ```WatchdogBase```. On start it decides whether to create ```WatchdogType1``` or ```WatchdogType2``` based on:
-- option 1: get SONiC platform name
-- option 2: check /sys/class/watchdog/watchdog0/timeleft existance for main watchdog
+```Chassis``` object holds a reference to ```WatchdogBase```. On start it decides whether to create ```WatchdogType1``` or ```WatchdogType2```:
+
+```Chassis``` object will list available watchdog devices in ```/dev/watchdog*``` and find the one with identity "mlnx-wdt-main" which is main Mellanox watchdog;
+Be checking ```/sys/class/watchdog/watchdog{wd_index}/timeleft``` existance ```Chassis``` can distinguish between Type 1 and Type 2 and create ```WatchdogType1``` or ```WatchdogType2``` object.
+If "mlnx-wd-main" is not available or error happened it set ```_watchdog``` variable to ```None```
 
 The watchdog daemon will call ```get_watchdog()``` to get watchdog object.
 
@@ -121,6 +132,10 @@ The watchdog daemon will call ```get_watchdog()``` to get watchdog object.
 
 - On error
   - set previous watchdog armed state and timeout
+
+### Open questions ###
+
+1. Could it be better to have seperate API to arm and ping watchdog?
 
 ### References ###
 0. https://github.com/Azure/sonic-platform-common/blob/master/sonic_platform_base/watchdog_base.py
