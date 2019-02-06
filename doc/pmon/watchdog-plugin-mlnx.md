@@ -117,6 +117,7 @@ Because of ```WatchdogType1``` does not support "get_remaining_time" operation i
 
 ```Chassis``` object will list available watchdog devices in ```/dev/watchdog*``` and find the one with identity "mlnx-wdt-main" which is main Mellanox watchdog;
 <p>
+
 By checking ```/sys/class/watchdog/watchdog{wd_index}/timeleft``` existance ```Chassis``` can distinguish between Type 1 and Type 2 and create ```WatchdogType1``` or ```WatchdogType2``` object.
 If "mlnx-wd-main" is not available or error happened it sets ```_watchdog``` variable to ```None```
 <p>
