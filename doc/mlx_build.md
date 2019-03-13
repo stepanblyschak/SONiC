@@ -159,6 +159,9 @@ User or Jenkins job has to write specific variables to *rules/config* in order t
 e.g.
 ```
 echo "MLNX_SDK_VERSION = 4.3.0136" >> rules/config
+
+# FW
+echo "MLNX_FW_SPC_URL = http://arc-build-server/fw/SPC/" >> rules/config
 echo "MLNX_FW_SPC_VERSION = 13.1910.0906" >> rules/config
 ...
 ```
