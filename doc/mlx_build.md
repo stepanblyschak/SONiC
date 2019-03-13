@@ -132,7 +132,7 @@ SONIC_PHONY_TARGETS += mlnx-sdk-packages
 
 Usage:
 ```
-$ make mlnx-sdk-packages
+$ make -f Makefile.work BLDENV=stretch mlnx-sdk-packages
 ```
 
 ## Build SONiC image with any FW, SDK, SAI (for integration purpose)
