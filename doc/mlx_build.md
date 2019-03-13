@@ -156,7 +156,7 @@ Cons:
 
 Pros:
 + No changes are requiered
-+ No issue with image name - need to either commit change in *rules/config* or dirty image with timestamp in the name will be built 
++ No issue with image name - need to either commit change or dirty image with timestamp in the name will be built 
 
 Cons:
 + Less simple for automation
