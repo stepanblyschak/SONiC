@@ -153,16 +153,6 @@ Cons:
   + These images will contain different FW, SDK, SAI versions
   + sonic_installer will refuse to install image which have the same name
 
-### 2. Override versions in relevant makefiles
-
-Pros:
-+ No need to change anything in buildsystem
-+ No issue with image name - need to either commit changes or dirty image with timestamp in the name will be built 
-
-Cons:
-+ Less simple for automation
-+ Need to change several makefiles (fw.mk, sdk.mk, mlnx-sai.mk) to change versions
-
 ### 2. Expose FW, SDK, SAI versions through rules/config
 
 User or Jenkins job has to write specific variables to *rules/config* in order to override versions
@@ -190,3 +180,6 @@ Pros:
 
 Cons:
 + Less simple for automation, but all changes in one file
+
+# Open question
++ Local SAI repository has debian version @SED_VERSION@
