@@ -11,7 +11,6 @@
   - [Build SONiC image with any FW, SDK, SAI (for integration purpose)](#build-sonic-image-with-any-fw-sdk-sai-for-integration-purpose)
     - [1. Expose FW, SDK, SAI version variables during build](#1-expose-fw-sdk-sai-version-variables-during-build)
     - [2. Override versions in relevant makefiles](#2-override-versions-in-relevant-makefiles)
-    - [2. Expose FW, SDK, SAI versions through rules/config](#2-expose-fw-sdk-sai-versions-through-rulesconfig)
 
 ## Overview and motivation
 Currently we have local **develop** branch based on **master** branch of Azure *sonic-buildimage* repositry which includes additional makefiles to build Mellanox SDK binaries from sources using local infrastructure;
@@ -153,7 +152,7 @@ Cons:
   + These images will contain different FW, SDK, SAI versions
   + sonic_installer will refuse to install image which have the same name
 
-### 2. Override FW, SDK, SAI versions in Jenkins build job
+### 2. Override versions in relevant makefiles
 
 Pros:
 + No changes are requiered
