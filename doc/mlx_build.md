@@ -153,36 +153,14 @@ Cons:
   + These images will contain different FW, SDK, SAI versions
   + sonic_installer will refuse to install image which have the same name
 
-### 2. Expose FW, SDK, SAI versions through rules/config
-
-User or Jenkins job has to write specific variables to *rules/config* in order to override versions
-e.g.
-```
-echo "MLNX_SDK_VERSION = 4.3.0136" >> rules/config
-
-# FW
-echo "MLNX_FW_SPC_URL = http://arc-build-server/fw/SPC/" >> rules/config
-echo "MLNX_FW_SPC_VERSION = 13.1910.0906" >> rules/config
-...
-```
-
-In relevant makefiles:
-<br>
-e.g.
-<br>
-*platform/mellanox/sdk.mk*
-```diff
-- MLNX_SDK_VERSION = 4.3.0134
-+ MLNX_SDK_VERSION ?= 4.3.0134
-```
-
+### 2. Override FW, SDK, SAI versions in Jenkins build job
 
 Pros:
-+ Simple change in makefiles
++ No changes are requiered
 + No issue with image name - need to either commit change in *rules/config* or dirty image with timestamp in the name will be built 
 
 Cons:
-+ Less simple for automation, but all changes in one file
++ Less simple for automation
 
 # Open question
 + Local SAI repository has debian version @SED_VERSION@
