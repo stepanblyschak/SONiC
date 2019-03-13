@@ -161,5 +161,3 @@ Pros:
 Cons:
 + Less simple for automation
 
-# Open question
-+ Local SAI repository has debian version @SED_VERSION@
