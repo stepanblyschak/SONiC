@@ -15,16 +15,25 @@ Usage: show techsupport [OPTIONS]
   Gather information for troubleshooting
 
 Options:
-  --period        Collect logs for given period (in days)
+  --since         Collect logs since given date
+                  a human readable string that represents a date
+                  e.g:
+                    "a day ago",
+                    "3 days 5 hours ago"
+                    "24 March"
   --verbose       Enable verbose output
   -?, -h, --help  Show this message and exit.
+```
+
+```
+admin@sonic:~$ show techsupport --since '1 day ago'
 ```
 
 Logrotation in SONiC is configured that it preserves modification time of syslog.$n.gz and this time matches the time in last written log message in this file
 
 ## generate_dump.sh flow
 1. Disable logrotatation before collecting logs<br>As it may mess with generate_dump.sh
-2. If there is "--period" parameter only collect logs from /var/log that are newer than [time.now() - period]
+2. If there is "--since" parameter only collect logs from /var/log that are newer than "since" argument
 3. Default behaviour remains the same meaning --last default is infinity
 4. Enable logrotation back
 
