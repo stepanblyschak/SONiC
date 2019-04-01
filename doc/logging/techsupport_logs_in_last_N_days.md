@@ -25,8 +25,17 @@ Options:
   -?, -h, --help  Show this message and exit.
 ```
 
+- new click option and validator for its argument added for show script<br>date string validation based on dateparse library
+- new option for generate_dump.sh script and validation with date utility
+
+## Examples
+
 ```
 admin@sonic:~$ show techsupport --since '1 day ago'
+```
+
+```
+admin@sonic:~$ show techsupport --since '24 march'
 ```
 
 Logrotation in SONiC is configured that it preserves modification time of syslog.$n.gz and this time matches the time in last written log message in this file
