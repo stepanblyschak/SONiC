@@ -15,8 +15,7 @@ Usage: show techsupport [OPTIONS]
   Gather information for troubleshooting
 
 Options:
-  --period        Collect logs for given period
-                  e.g: "1d", "24h", etc.
+  --period        Collect logs for given period (in days)
   --verbose       Enable verbose output
   -?, -h, --help  Show this message and exit.
 ```
