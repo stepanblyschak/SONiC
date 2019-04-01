@@ -15,7 +15,8 @@ Usage: show techsupport [OPTIONS]
   Gather information for troubleshooting
 
 Options:
-  --last          Collect logs for last N days
+  --period        Collect logs for given period
+                  e.g: "1d", "24h", etc.
   --verbose       Enable verbose output
   -?, -h, --help  Show this message and exit.
 ```
@@ -24,7 +25,7 @@ Logrotation in SONiC is configured that it preserves modification time of syslog
 
 ## generate_dump.sh flow
 1. Disable logrotatation before collecting logs<br>As it may mess with generate_dump.sh
-2. If there is "--last" parameter only collect logs from /var/log that are newer than [time.now() - last_param]
+2. If there is "--period" parameter only collect logs from /var/log that are newer than [time.now() - period]
 3. Default behaviour remains the same meaning --last default is infinity
 4. Enable logrotation back
 
