@@ -48,7 +48,9 @@ Logrotation in SONiC is configured that it preserves modification time of syslog
 * If there is "--since" parameter only collect logs from /var/log that are newer than "since" argument
   * Create a temporary reference file, e.g:<br>```bash touch --date="${DATE}" /tmp/datetime_reference```
   * Find logs, core files passing --newer parameter to find utility:<br>```bash find -L /var/log -type f --newer /tmp/datetime_reference```
-* Default behaviour remains the same meaning --last default is infinity
+* Default behaviour remains the same meaning "--since" default is infinity
 * Enable logrotation back
+
+## Exclude /etc/mlnx, /etc/mft/
 
 ## Open questions
