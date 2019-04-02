@@ -15,7 +15,7 @@ Usage: show techsupport [OPTIONS]
   Gather information for troubleshooting
 
 Options:
-  --since DATE    Collect logs and core files since given DATE
+  --since DATE    Collect logs and core files since given DATE,
                   a human readable string that represents a date
                   e.g:
                     "yesterday"
