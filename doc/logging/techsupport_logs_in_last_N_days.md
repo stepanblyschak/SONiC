@@ -24,7 +24,6 @@ Options:
   --verbose       Enable verbose output
   -?, -h, --help  Show this message and exit.
 ```
-y
 
 - new option for generate_dump.sh script and validation with date utility:<br>
 ```bash
