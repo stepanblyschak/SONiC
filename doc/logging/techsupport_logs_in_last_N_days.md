@@ -25,10 +25,7 @@ Options:
   -?, -h, --help  Show this message and exit.
 ```
 
-- new option for generate_dump.sh script and validation with date utility:<br>
-```bash
-date --date="${SINCE_DATE}" > /dev/null || abort "Invalid date expression passed"
-```
+- new option for generate_dump.sh script and validation with date utility:<br> ```bash date --date="${SINCE_DATE}" > /dev/null || abort "Invalid date expression passed"```
 
 ## Examples
 
