@@ -56,5 +56,7 @@ Logrotation in SONiC is configured that it preserves modification time of syslog
 * Enable logrotation back
 
 ## Exclude /etc/mlnx, /etc/mft/
+## Include mstdump
+## Fix procfs dump permission issue
 
 ## Open questions
