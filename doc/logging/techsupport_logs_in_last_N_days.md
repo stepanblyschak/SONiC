@@ -6,6 +6,14 @@ If the SONiC system is running for quite some time it may have a huge amount of 
 Since commonly there is no need to gater all logs but just logs and core file for last several hours/days this design doc introduces a new options for ```show techsupport``` command
 
 ## Solution
+
+```bash
+$ du -csh *mts*
+3.7M    sonic_dump_mts-sonic-dut_20190402_140800-NO-LOGS.tar.gz
+572M    sonic_dump_mts-sonic-dut_20190402_140800.tar.gz
+
+```
+
 ## Introducing option to specify how much logs you want to dump
 
 ```
