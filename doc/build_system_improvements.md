@@ -10,7 +10,7 @@ So we will first focus on second stage as it is the most time consuming stage
 
 ## Improving Dockerfile instructions
 
-As each build instruction in Dockerfile involves creating a new layer, which is time consuming for docker daemon.
+Each build instruction in Dockerfile involves creating a new layer, which is time consuming for docker daemon.
 
 As long as we are using ```--no-cache --squash``` to build docker images there is no real use of building in layers.
 
