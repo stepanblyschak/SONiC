@@ -117,7 +117,16 @@ install_python_wheels
 Gives 2.5 times build time improvement
 Max 6.5 times build time improvement
 
-### Avoid COPY debs/py-debs/python-wheels at all
+**NOTE**: (bug) squash generates image squashed with base image resulting in sonic image size (600 mb -> 1.5 gb)
+
+Introduce option SONIC_USE_DOCKER_BUILDKIT and warn user about image size:
+```
+$ make SONIC_USE_DOCKER_BUILDKIT=y target/sonic-mellanox.bin
+warning: using docker buildkit will produce increase image size (more details: https://github.com/moby/moby/issues/38903)
+...
+```
+
+### Avoid COPY debs/py-debs/python-wheels at all (for future)
 https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/experimental.md#run---mounttypebind-the-default-mount-type
 
 ```Dockerfile
@@ -130,7 +139,5 @@ RUN --mount=type=bind,target=/debs/,source=debs/ dpkg_apt() deb1 debs2 deb3...
 
 **NOTE**: requires enabling ```# syntax = docker/dockerfile:experimental``` in Dockerfile
 
-**NOTE**: BuildKit does not support building squashed images
-<br>PR to support squash in BuildKit: https://github.com/moby/buildkit/pull/833
-<br>As workaround we can use a seperate tool https://github.com/goldmann/docker-squash
+
 
