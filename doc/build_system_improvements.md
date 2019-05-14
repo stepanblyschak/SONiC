@@ -105,7 +105,7 @@ install_debian_packages
 install_python_wheels
 ```
 
-## Upgrade docker in slave to 18.09 and use Docker Build Kit
+## Upgrade docker in slave to 18.09 and use Docker Build Kit (optionally)
 
 1. Upgrade docker in sonic-slave-stretch to 18.09 - already available in debian stretch repositories
 2. Add environment variable ```DOCKER_BUILD_KIT=1``` to ```docker build``` command to use BuildKit instead of legacy docker build engine
