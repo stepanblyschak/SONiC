@@ -126,6 +126,8 @@ warning: using docker buildkit will produce increase image size (more details: h
 ...
 ```
 
+However, eventuly it will be fixed, so we can use SONIC_USE_DOCKER_BUILDKIT=y by default
+
 ### Avoid COPY debs/py-debs/python-wheels at all (for future)
 https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/experimental.md#run---mounttypebind-the-default-mount-type
 
@@ -140,4 +142,50 @@ RUN --mount=type=bind,target=/debs/,source=debs/ dpkg_apt() deb1 debs2 deb3...
 **NOTE**: requires enabling ```# syntax = docker/dockerfile:experimental``` in Dockerfile
 
 
+## Enable swss, swss-common, sairedis parallel build
 
+From ``` man dh build ```:
+```
+If your package can be built in parallel, please either use compat 10 or pass --parallel to dh. Then dpkg-buildpackage -j will work.
+```
+
+- swss (can be built in parallel, 7m -> 2m)
+- swss-common (can be built in parallel)
+- sairedis (fails, need a fix)
+
+## Seperate sairedis RPC from non-RPC build
+
+Some work is done on that but no PR (https://github.com/Azure/sonic-sairedis/issues/333)
+
+sairedis is a dependency for a lot of targets (usually I see sairedis compilation takes a lot of time blocking other targets to start)
+
+No need to build libthrift, saithrift (maybe more)
+
+## Seperate libsairedis, libsaivs, syncd and build them seperately
+
+- Currently building sairedis builds everything (including saivs) (twice)
+- Depends on vendor SAI, vendor SDK
+- Blocks other targets to start compiling
+
+Build libsairedis seperately
+- Does not depend on vendor SAI, vendor SDK
+- Once built, swss can start compiling, then swss, teamd, bgp dockers
+
+Build syncd seperately
+- Depends on vendor SAI, vendor SDK
+- Does not block non-vendor-dependent targets to be built in parallel
+- Change in syncd does not rebuild almost everything
+
+## Seperate swss components and build them seperately
+
+- teamsyncd
+- fpmsyncd
+- neighsyncd ??
+- portsyncd ??
+- orchagent ??
+- cfgmgr ??
+
+Benefits:
+- No unused binaries in teamd, bgp dockers
+- More parallelism during build
+- Change in orchagent does not require to rebuild teamd, bgp dockers
