@@ -1,9 +1,9 @@
-# Moving PTF test flow to pytest proposal
+# Moving PTF test control flow to pytest proposal
 
 ## Motivation
 
 The current way SONiC management infrastructure runs traffic test is:
-- sonic-mgmt docker node running ansible/pytest usual flow:
+- sonic-mgmt docker node running ansible/pytest flow:
   - deploy PTF script on PTF host
   - prepare parameters, configuration files for PTF script to run
   - runs PTF script, asserting on return code
@@ -21,9 +21,9 @@ Usually this is done via *test prameters* and each PTF script includes a boilerp
  # a lot of other test paramters
 ```
 
-The corresponding command line to run just a PTF scipt is quite big and inconvinient:
+The corresponding command line to run just a PTF script (which is usefull for test developing/debugging purpose) is quite big and inconvinient:
 
-e.g. for current ACL test
+e.g. to run current ACL test
 
 ```
 ptf --test-dir acstests acltb_test.AclTest   --platform-dir ptftests  --platform remote  -t \"router_mac='98:03:9b:94:d4:80';testbed_type='t1';tor_ports='27,25,26,17,24,31,23,30,19,18,16,22,29,20,28,21';spine_ports='2,0,1,13,14,8,4,9,3,12,11,10,7,15,5,6';dst_ip_tor='172.16.1.0';dst_ip_tor_forwarded='172.16.2.0';dst_ip_tor_blocked='172.16.3.0';dst_ip_spine='192.168.0.0';dst_ip_spine_forwarded='192.168.0.16';dst_ip_spine_blocked='192.168.0.17'\"  --log-file /tmp/acltb_test.AclTest.ingress.2019-07-21-21:37:10.log
@@ -37,7 +37,7 @@ In conclusion, the main thought hear is that this approach brings difficulties i
 ### 2. Harder to debug PTF tests
 
 If one wants to debug PTF test cases, one has to:
-- stop controlling node before PTF run
+- stop controlling node before PTF runs
 - figure out which parateres are requiered for PTF to run
 - run PTF test and set a break point on interested test case code on ptf host
 
@@ -46,25 +46,27 @@ The whole process includes switching between sonic-mgmt node and ptf host.
 ### 3. Test frameworks inconsistency
 
 PTF is based on UnitTest, while controlling node runs py.test code.
-One should now both to create traffic tests.
+One should be familiar with both to develop traffic tests.
 
 ### 4. Inconvinience in running single traffic test case
 
-While reworking tests on py.test we aim to provide ability to run a single traffic case without running any other test cases.
+While reworking tests on py.test we aim to meet two requirements:
+ - provide ability to run a single traffic case without running any other test cases.
+ - care about test run performance (all current ansible ACL test cases take ~40m)
 
 In current aproach PTF tests are designed such that they have single test class instance which runs all test cases at one run.
-In order to meet test cases indenependency we have to rewrite PTF tests and break down a single Test class into smaller Test classes, each test case run invokes a PTF command line execution on PTF host.
+In order to meet test cases indenependency we have to rewrite PTF tests and break down a single test class into smaller test classes, each test case run invokes a PTF command line execution on PTF host.
 This significantly slows down the test, e.g. for ACL tests:
 
 Currently there is one AclTest object which runs in one command and executes all traffic test cases in ~20 sec.
 
-If we break down AclTest into smaller test cases (SrcIpMatchForward, L4DstPortMatchDropped, etc. ~20 test classes), each test case run from py.test execute PTF command line and the whole test run time increases to ~2 min.
+If we break down AclTest into smaller test cases (SrcIpMatchForward, L4DstPortMatchDropped, etc. ~20 test classes), each test case run from py.test execute PTF command line and the whole test run time increases to ~2 min. (x2 for tor->spine/spine->tor, x4 for different test scenarios, x2 for ingress/egress traffic test). Each new rule and corresponding test case adds ~1.5 min and for ACL rule testing there can be much more than 20 test cases.
 
 ## Overview of PTF/py.test integration
 
-The idea is to move all test control flow that currently is written in PTF scripts to py.test.
+The idea is to move all test control flow that currently is written in PTF scripts to py.test. **NOTE** It does not exclude legacy approach, so FDB, BGP speacker tests etc. can still use external PTF scripts.
 
-In order to implement this we would need to run **ptf_nn_aegnt.py** on PTF host. The sonic-mgmt host will connect to **ptf_nn_agent.py** and control PTF over TCP.
+In order to implement this we would need to run **ptf_nn_agent.py** on PTF host. The sonic-mgmt host will connect to **ptf_nn_agent.py** and control PTF over TCP.
 
 This means that py.test code will prepare packets to send and match and also send and receive using PTF framework functionallity, however actual traffic is sent and received on PTF host.
 
@@ -80,7 +82,7 @@ def verify_packet_any_port(test, pkt, ports=[], device_number=0):
 
 In order to provide same interface as BaseTest we will have to implement PtfTestAdapter object:
 
-Example implementation:
+Example minimal implementation:
 
 
 ```python
@@ -129,7 +131,7 @@ def test_l4_dport_match_forwarded(self, setup, direction, ptfadapter, counters_s
     testutils.verify_packet_any_port(ptfadapter, exp_pkt, ports=self.get_dst_ports(setup, direction))
 ```
 
-**NOTE** : despite the fact that PTF testutils uses unittest's methods like *assertTrue*, *fail* etc., py.test has some sort of support for that, so it in case of *testutils.verify_packet_any_port* fails by calling UnitTest *fail* it is still correctly handled by py.test:
+**NOTE** : despite the fact that PTF testutils uses unittest's methods like *assertTrue*, *fail* etc., py.test has some sort of support for that, so in case when *testutils.verify_packet_any_port* fails by calling UnitTest *fail* it is still correctly handled by py.test:
 
 ```
 test_l2.py::test_broken FAILED                                                                                                                                                                                                      [100%]
@@ -253,3 +255,15 @@ WARNING  dataplane:dataplane.py:873 Dataplane poll with exp_pkt but no port numb
 ...
 INFO     dataplane:dataplane.py:634 Thread exit
 ```
+
+One more benefit is that PTF logs will be on sonic-mgmt node and not on PTF node which can be destroyed/recreated and logs can be lost.
+
+The above described method of running traffic tests seems to solve all above issues and meet all requirements:
+
+- there is no passing test information/context to PTF via command line or some files
+- it is easy to debug by just setting a breakpoint in interested place in pytest
+- no boilerplate code in PTF scripts that deserialize command line input
+- easy to use *ptfadpater* fixture to pass in to PTF testutils functions
+- logs/asserts from PTF framework are captured by py.test framework without additional integration
+- no seperate PTF invokations per each test case which improves performance
+- easy to seperate test cases directly in py.test code
