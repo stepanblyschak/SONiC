@@ -123,13 +123,15 @@ Usage example:
 
 ```python
 def test_some_traffic(ptfadapter):
-    pkt = testutils.simple_tcp_packet(eth_dst=host_facts['ansible_Ethernet0']['macaddress'],
+    pkt = testutils.simple_tcp_packet(
+        eth_dst=host_facts['ansible_Ethernet0']['macaddress'],
         eth_src=ptfadapter.dataplane.get_mac(0, 0),
         ip_src='1.1.1.1',
         ip_dst='192.168.0.1',
         ip_ttl=64,
         tcp_sport=1234,
-        tcp_dport4321)
+        tcp_dport=4321)
+        
     exp_pkt = pkt.copy()
     exp_pkt = mask.Mask(exp_pkt)
     exp_pkt.set_do_not_care_scapy(packet.Ether, 'dst')
