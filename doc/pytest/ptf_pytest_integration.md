@@ -122,13 +122,23 @@ def ptfadapter(ansbile_adhoc, testbed):
 Usage example:
 
 ```python
-def test_l4_dport_match_forwarded(self, setup, direction, ptfadapter, counters_sanity_check):
-    pkt = self.tcp_packet(setup, direction, ptfadapter)
-    pkt['TCP'].dport = 0x1217
-    exp_pkt = self.expected_mask_routed_packet(pkt)
+def test_some_traffic(ptfadapter):
+    pkt = testutils.simple_tcp_packet(eth_dst=host_facts['ansible_Ethernet0']['macaddress'],
+        eth_src=ptfadapter.dataplane.get_mac(0, 0),
+        ip_src='1.1.1.1',
+        ip_dst='192.168.0.1',
+        ip_ttl=64,
+        tcp_sport=1234,
+        tcp_dport4321)
+    exp_pkt = pkt.copy()
+    exp_pkt = mask.Mask(exp_pkt)
+    exp_pkt.set_do_not_care_scapy(packet.Ether, 'dst')
+    exp_pkt.set_do_not_care_scapy(packet.Ether, 'src')
+    exp_pkt.set_do_not_care_scapy(packet.IP, 'ttl')
+    exp_pkt.set_do_not_care_scapy(packet.IP, 'chksum')
 
-    testutils.send(ptfadapter, self.get_src_port(setup, direction), pkt)
-    testutils.verify_packet_any_port(ptfadapter, exp_pkt, ports=self.get_dst_ports(setup, direction))
+    testutils.send(ptfadapter, 5, pkt)
+    testutils.verify_packet_any_port(ptfadapter, exp_pkt, ports=[28, 29, 30, 31])
 ```
 
 **NOTE** : despite the fact that PTF testutils uses unittest's methods like *assertTrue*, *fail* etc., py.test has some sort of support for that, so in case when *testutils.verify_packet_any_port* fails by calling UnitTest *fail* it is still correctly handled by py.test:
