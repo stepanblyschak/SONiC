@@ -119,7 +119,7 @@ def ptfadapter(ansbile_adhoc, testbed):
     # kill nn agent
 ```
 
-Usage example:
+Pytest usage example:
 
 ```python
 def test_some_traffic(ptfadapter):
