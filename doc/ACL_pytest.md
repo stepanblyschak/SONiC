@@ -229,7 +229,7 @@ class BaseAclTest(object):
         Sanity checks for ACL counters: verify ACL counters increased.
         This fixture should yield a 'set' of rule IDs to verify counters have increased after traffic test.
         The traffic test cases have to append rule ID in the set.
-        Before traffic test cases start this fixture collects counters using 'acl_rules' ansible module;
+        Before traffic test cases start this fixture collects counters using 'acl_facts' ansible module;
         After traffic test cases this fixture goes through the set of rule IDs and verify counters have increased
         '''
 ```
