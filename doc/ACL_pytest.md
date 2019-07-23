@@ -277,7 +277,7 @@ Will run the test for L4 source port match ACL rule wich is expected to accept t
 
 22 Test classes have to be created.
 
-###### Pytest code
+#### Pytest code
 
 In py.test script the logic will look like this:
 
@@ -290,6 +290,8 @@ class BaseAclTest(object):
         
         counters_sanity_check.rules.append(rule_id)
 ```
+
+#### Another approach to run PTF traffic test cases which seems to be simpler is described in proposal https://github.com/stepanblyschak/SONiC/blob/ptf_pytest/doc/pytest/ptf_pytest_integration.md
 
 #### Loganalyzer
 
