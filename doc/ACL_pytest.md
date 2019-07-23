@@ -70,13 +70,13 @@ There is no obious reason why it was limited to 'function'. Unless SONiC system 
 
 ##### duthost, ptfhost fixtures shortcuts
 
-To avoid repeating same code snippet we will provide two shortcut fixtures in 'conftest.py'
+To avoid repeating same code snippet we will provide two shortcut fixtures *duthost* and *ptfhost* in 'conftest.py'
 
 Simplifies this:
 ```python
 def test_smth(ansible_adhoc, testbed):
-    duthost = testbed['dut']
-    dut = ansible_host(ansible_adhoc, duthost)
+    dut = testbed['dut']
+    duthost = ansible_host(ansible_adhoc, dut)
     # ...
 ```
 to this:
@@ -300,7 +300,7 @@ Any fixture the executes DUT commands will run with loganalyzer configured with 
 #### Marks
 
 - mark whole test with mark 'acl'
-- mark reboot test with mark 'reboot'
+- mark *TestAclWithReboot* test with mark 'reboot'
 
 #### Wrapping in ansible
 
