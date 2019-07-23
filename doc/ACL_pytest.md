@@ -55,9 +55,10 @@ ansible/
 ### Requirements
 
 - Provide the same coverage
-- Test cases isolation, e.g. ability to run single traffic test cases without a need to run whole test
+- Test cases independency, e.g. ability to run single traffic test cases without a need to run whole test
+- Care about test performance (whole ACL test cases take ~40m)
 - Avoid duplications like in acltb_test_*.yml playbooks
-
+- Previous command line to run ansible ACL test should invoke pytest
 
 ### Framework requirements
 
@@ -117,7 +118,7 @@ tests/
 - The *acl* directory here created, so that other test modules related to ACL test can be put here and ACL related fixtures, etc. can live in conftest.py
 - The *common* has common functionallity required by a set of tests.
 - *acstests* simply a symbolic link to acs PTF test scripts
-- *templates* direcotry contains ACL related templates
+- *templates* direcotry contains ACL related templates (configuration for ACL table, rules)
 - *loganalyzer* directory contains loganalyzer match/expect/ignore files
 
 
@@ -129,11 +130,11 @@ The current test is divided into 4 cases:
 - Reboot test - setup ACL rules, reboot, run traffic, teardown ACL rules
 - Port toggle test - setup ACL rules, toggle all ports, run traffic, teardown ACL rules
 
-The test logic will be seperated into generic traffic test in *BaseAclTest* and derivatives are meant to provide fixture to setup/teardown according to their requirements.
+The traffic test logic will be seperated into generic traffic test in *BaseAclTest* and derivatives are meant to provide fixture to setup/teardown according to their requirements.
 
 According to above cases 4 test classes has to be coded:
 
-- *TestAcl*
+- *TestBasicAcl*
 - *TestIncrementalAcl*
 - *TestAclWithReboot*
 - *TestAclWithPortToggle*
@@ -156,35 +157,43 @@ These fixtures, by the way,can live in *acl/conftest.py*, so other ACL test modu
 
 ```python
 @pytest.fixture(scope='module')
-def setup(dut, testbed):
+def setup(duthost, testbed):
     '''
-    Setup fixture gathers all test required information from DUT facts and testbed
+    Setup fixture gathers all test required information from DUT facts and testbed and returns a dictionary of gathered information
+    E.g.
+      - router_mac
+      - tor_ports
+      - spine_ports
+      - dest IP tor blocked
+      - dest IP tor forwarded
+      - dest IP spine blocked
+      - dest IP spine forwarded
+      - etc.
     '''
 
 @pytest.fixture(scope='module', params=['ingress', 'egress'])
 def stage(request):
     '''
-    Small fixture to return the ACL table stage is beeing tested
+    Small fixture to parametrize test for ingress, egress tables
     '''
 
 @pytest.yield_fixture(scope='module')
-def config(request, dut, setup):
+def acl_table_config(request, dut, setup, stage):
     '''
-    Fixture generates ACL tables, ACL rules configuration and deploys on the DUT
-    The return value is config files generated
+    Fixture generates ACL tables configuration files before yield and removes generated files after yield
     '''
 
 @pytest.yield_fixture(scope='module')
-def table(dut, config, stage):
+def acl_table(dut, acl_table_config):
     '''
-    Create an ACL table on DUT
+    Apply ACL table on DUT before yield, remove ACL table after yield
     '''
 
 ```
 
-Based on the above it is assumed that tests in one module will reuse the ACL table created by 'table' fixture.
+Based on the above it is assumed that tests in one module will reuse the ACL table created by 'acl_table' fixture.
 
-If, for example, some one is developing ACL table scale test he will need a seperate test module ('test_acl_scale.py') and override 'config' fixutre to generate many tables configuration and reuse 'table' fixture.
+If, for example, some one is developing ACL table scale test he will need a seperate test module ('test_acl_scale.py') and override 'config' fixutre to generate many tables configuration and reuse 'acl_table' fixture to apply scale configuration.
 
 ###### Class scope
 
@@ -205,26 +214,32 @@ class BaseAclTest(object):
     @pytest.yield_fixture(scope='class')
     def rules(self, dut, table):
         '''
-        Setup/Teardown ACL rules on DUT
+        Call setup/teardown ACL rules on DUT
+        '''
+        
+    @pytest.fixture(params=['spine->tor', 'tor->spine'])
+    def direction(self, request):
+        '''
+        fixture used to parametrize traffic test cases for two different directions
         '''
 
     @pytest.yield_fixture(scope='class', autouse=True)
     def counters_sanity_check(self, dut, rules):
         '''
-        Sanity checks for ACL counters: verify ACL counters increased
+        Sanity checks for ACL counters: verify ACL counters increased.
+        This fixture should yield a 'set' of rule IDs to verify counters have increased after traffic test.
+        The traffic test cases have to append rule ID in the set.
+        Before traffic test cases start this fixture collects counters using 'acl_rules' ansible module;
+        After traffic test cases this fixture goes through the set of rule IDs and verify counters have increased
         '''
-
-    def test_traffic(self):
-        # ...
-
 ```
 
 
 #### Isolate test cases in PTF script *acltb_test.py*
 
-Current implementation of the PTF test includes all the test cases under signle test object. There are two issue with current approach
-- Test cases are not isolated, so user cannot run individual test without modifying sources mannualy
-- Test cases hardcode ACL rule behaviour, this means we have ACL rule configuration generation step which defines which rules to test and PTF test script must be aligned with configuration; we will try to have PTF test very generic for different ACL rules and py.test logic will invoke PTF with parameters aligned with generated ACL configuration
+Current implementation of the PTF test includes all the test cases under signle test object.
+Test cases are not isolated, so user cannot run individual test without modifying sources mannualy
+
 
 PTF test script will have a base class with defined methods to send/receive:
 
@@ -237,30 +252,30 @@ class AclRuleTest(BaseTest):
     def runTest(self):
         # run test
 
-class L4SourcePortMatch(AclRuleTest):
+class L4SourcePortMatchForwarded(AclRuleTest):
     def setUp(self):
         super(L4PortRangeMatch, self).setUp()
-        self.sport = self.test_params['source_port']
-        self.pkt.sport = self.exp_pkt.sport = self.sport
+        self.pkt.sport = self.exp_pkt.sport = 0x1271
+        self.forwarded = True
 ```
 
 Invokation like this:
 
 ```
 ptf \
-    --test-dir acstests acltb_test.L4SourcePortMatch
+    --test-dir acstests acltb_test.L4SourcePortMatchForwarded
     --platform-dir ptftests
     --platform remote
     -t "
         # ...
-        proto='udp',
-        source_port='4126';
         direction='spine->tor';
         forward='True';
        "
 ```
 
 Will run the test for L4 source port match ACL rule wich is expected to accept traffic
+
+22 Test classes have to be created.
 
 ###### Pytest code
 
@@ -270,80 +285,46 @@ In py.test script the logic will look like this:
 
 class BaseAclTest(object):
 
-    @pytest.mark.parametrize('direction' ['spine->tor', 'tor->spine'])
-    @pytest.mark.parametrize('rule_id', 'options',
-        [
-            pytest.param(
-                1,  # Rule sequence ID to be tested
-                {
-                    'L4SourcePortMatch',
-                    'tcp',
-                    'forward',
-                    'source_port': '4126'
-                },
-                id='L4 source port match - forwarded',
-            )
-        ]
-    )
-    def test_traffic(self, ptf, rule_id, direction, options, counters_sanity_check):
-        # invoke ptf runner
+    def test_l4_source_port_match_forwarded(self, ptfhost, direction, counters_sanity_check):
+        # invoke ptf runner for 'L4SourcePortMatchForwarded' test class
+        
         counters_sanity_check.rules.append(rule_id)
-
-        ## NOTE: counters_sanity_check runes after class test cases finished
-        ##       It goes through rule_ids collected during the run and check that counters
-        ##       have increased
-```
-
-Ideally the parametrization list can be autogenerated based on rules configuration.
-
-Adding a new rule and creating a test case for it assumes creating or reusing existing test class and adding the test case in the parametrized list.
-
-Run result output:
-
-```
-[       INFO ] setup ACL rules on arc-switch1025
-...
-test_acl.py::TestAcl::test_traffic[ingress-L4-source-port-match-forwarded-spine->tor-options1] PASSED
-...
-test_acl.py::TestAcl::test_traffic[egress-L4-source-port-match-forwarded-tor->spine-options1] FAILED
-...
-[       INFO ] teardown ACL rules on arc-switch1025
-...
 ```
 
 #### Loganalyzer
 
-Any fixture the executes DUT commands will run with loganalyzer. If some setup stage fails with errors in logs the test cases that use those ACL rules will fail, however other tests that do not rely on failed ACL rules will still run.
+Any fixture the executes DUT commands will run with loganalyzer configured with *tests/acl/loganalyzer/* files. If some setup stage fails with errors in logs the test cases that use those ACL rules will fail, however other tests that do not rely on failed ACL rules will still run.
 
 #### Marks
 
-IMO, marks are usefull
-
-Use cases:
-
-1. One has modified loganalyzer and wants to make sure he did not break tests, so wants to run all tests that use loganalyzer, like this:
-```
-py.test -m loganalyzer
-```
-
-2. Assuming, one wants to run warm reboot tests, but warm reboot can be invoked in many tests: pfc wd, vxlan, warm reboot test itself.
-
-```
-py.test -m warm_reboot
-```
-
-For ACL test the following marks are suggested:
-- loganalyzer (whole module)
-- reboot (test class)
-- port_toggle (test class)
+- mark whole test with mark 'acl'
+- mark reboot test with mark 'reboot'
 
 #### Wrapping in ansible
 
-acltb.yml will be modified to print message:
+##### *pytest_runner.yml* will be created in *ansible/roles/test/tasks*:
+
+This playbook will have input variables:
+
+```yml
+
+- include: pytest_runner.yml
+  vars:
+    test_node: acl # test directory or file or specific test case to run
+    test_filter: '{{ test_filter_expr }}' # based on ansible input parameters some test have to be skipped, this can be done via *test_filter* which is passed to pytest as this : 'pytest acl -k '{{ test_filter }}'
+    test_mark: acl # optionaly run test by mark
 
 ```
-The ansible playbook for ACL test is depreceted, use py.test. This playbook is just a wrapper.
+
+It will print a message that ansible-playbook is deprecated for this test:
+
+```
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! Ansible playbook for running ACL test is now deprecated !!!!
+!!!! This playbook is just a wrapper to run py.test !!!!!!!!!!!!!
+!!!!!!!!!!!!!! Consider running it with py.test !!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ```
 
-And execute local action to invoke py.test
+acltb.yml will be modified to invoke *pytest_runner.yml*:
 
