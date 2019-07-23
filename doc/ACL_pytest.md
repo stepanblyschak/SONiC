@@ -235,63 +235,20 @@ class BaseAclTest(object):
 ```
 
 
-#### Isolate test cases in PTF script *acltb_test.py*
+#### Traffic test cases
 
-Current implementation of the PTF test includes all the test cases under signle test object.
-Test cases are not isolated, so user cannot run individual test without modifying sources mannualy
+##### approach to run PTF traffic test cases which seems to be simpler is described in proposal https://github.com/stepanblyschak/SONiC/blob/ptf_pytest/doc/pytest/ptf_pytest_integration.md
 
-
-PTF test script will have a base class with defined methods to send/receive:
 
 ```python
-class AclRuleTest(BaseTest):
-    def setUp(self):
-        # generic parameters from self.test_params
-        pass
+def test_icmp_source_ip_match_dropped(self, setup, direction, ptf_adapter, counters_sanity_check):
+    pkt = self.icmp_packet(setup, direction, ptf_adapter)
+    pkt['IP'].src = '20.0.0.8'
+    exp_pkt = self.expected_mask_routed_packet(pkt)
 
-    def runTest(self):
-        # run test
-
-class L4SourcePortMatchForwarded(AclRuleTest):
-    def setUp(self):
-        super(L4PortRangeMatch, self).setUp()
-        self.pkt.sport = self.exp_pkt.sport = 0x1271
-        self.forwarded = True
+    testutils.send(ptf_adapter, self.get_src_port(setup, direction), pkt)
+    testutils.verify_no_packet_any(ptf_adapter, exp_pkt, ports=self.get_dst_ports(setup, direction))
 ```
-
-Invokation like this:
-
-```
-ptf \
-    --test-dir acstests acltb_test.L4SourcePortMatchForwarded
-    --platform-dir ptftests
-    --platform remote
-    -t "
-        # ...
-        direction='spine->tor';
-        forward='True';
-       "
-```
-
-Will run the test for L4 source port match ACL rule wich is expected to accept traffic
-
-22 Test classes have to be created.
-
-#### Pytest code
-
-In py.test script the logic will look like this:
-
-```python
-
-class BaseAclTest(object):
-
-    def test_l4_source_port_match_forwarded(self, ptfhost, direction, counters_sanity_check):
-        # invoke ptf runner for 'L4SourcePortMatchForwarded' test class
-        
-        counters_sanity_check.rules.append(rule_id)
-```
-
-#### Another approach to run PTF traffic test cases which seems to be simpler is described in proposal https://github.com/stepanblyschak/SONiC/blob/ptf_pytest/doc/pytest/ptf_pytest_integration.md
 
 #### Loganalyzer
 
