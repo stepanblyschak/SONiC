@@ -236,8 +236,9 @@ class BaseAclTest(object):
 
 #### Traffic test cases
 
-##### approach to run PTF traffic test cases which seems to be simpler is described in proposal https://github.com/stepanblyschak/SONiC/blob/ptf_pytest/doc/pytest/ptf_pytest_integration.md
+##### traffic test cases will be implemented according to proposal https://github.com/stepanblyschak/SONiC/blob/ptf_pytest/doc/pytest/ptf_pytest_integration.md
 
+e.g. for ICMP source IP match rule with action DROP test case
 
 ```python
 def test_icmp_source_ip_match_dropped(self, setup, direction, ptf_adapter, counters_sanity_check):
