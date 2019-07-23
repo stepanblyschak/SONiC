@@ -250,6 +250,17 @@ def test_icmp_source_ip_match_dropped(self, setup, direction, ptf_adapter, count
     testutils.verify_no_packet_any(ptf_adapter, exp_pkt, ports=self.get_dst_ports(setup, direction))
 ```
 
+#### test run output example
+
+```
+acl/test_acl.py::TestBasicAcl::test_rules_priority_dropped[ingress-tor->spine] PASSED                                 [  3%]
+acl/test_acl.py::TestBasicAcl::test_rules_priority_dropped[ingress-spine->tor] PASSED                                 [  3%]
+...
+acl/test_acl.py::TestBasicAcl::test_icmp_source_ip_match_forwarded[egress-tor->spine] PASSED                          [ 76%]
+acl/test_acl.py::TestBasicAcl::test_icmp_source_ip_match_forwarded[egress-spine->tor] PASSED                          [ 76%]
+
+```
+
 #### Loganalyzer
 
 Any fixture the executes DUT commands will run with loganalyzer configured with *tests/acl/loganalyzer/* files. If some setup stage fails with errors in logs the test cases that use those ACL rules will fail, however other tests that do not rely on failed ACL rules will still run.
