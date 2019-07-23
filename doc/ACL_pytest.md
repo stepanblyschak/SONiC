@@ -61,15 +61,28 @@ ansible/
 
 ### Framework requirements
 
-pytest-ansible plugin does not provide all the functionality it may be required for implementing ACL test
-
 ##### 'ansible_*' fixtures scope limitation
 
 Because of 'ansible_adhoc' fixture is scoped to a function it limits the possibility to use this fixture in class/module/session scoped setup/teardown style fixtures.
 
 There is no obious reason why it was limited to 'function'. Unless SONiC system test framework uses 'ansible_adhoc' in a way it breaks the 'session' scope, we could override the fixture with 'session' scope in 'conftest.py'.
 
-NOTE: *We will skip this part here in the design right now until we reach some decision on this limitation; Below fixutres in this design depend on 'dut' host provided by 'ansible_adhoc'*
+##### duthost, ptfhost fixtures shortcuts
+
+To avoid repeating same code snippet we will provide two shortcut fixtures in 'conftest.py'
+
+Simplifies this:
+```python
+def test_smth(ansible_adhoc, testbed):
+    duthost = testbed['dut']
+    dut = ansible_host(ansible_adhoc, duthost)
+    # ...
+```
+to this:
+```python
+def test_smth(duthost):
+    # ...
+```
 
 
 ##### Common tasks missing
