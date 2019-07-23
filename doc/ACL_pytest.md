@@ -102,7 +102,6 @@ The test will be structured as follows:
 
 ```
 tests/
-    acstests/ -> ../ansible/roles/test/files/acstests/
     common/
         __init__.py
         reload_config.py
