@@ -53,12 +53,13 @@ The sonic-sdk docker has all the swss SDK libraries like:
 * swss common
 * sairedis
 * etc.
+
 Along with their -dev packages, and build packages like gcc, make, autotools etc.
 
 ## Managing SONiC+ dockers
 TBD
 ## CONFIG_DB schema
-Every SONiC+ application **MUST** provide a valid CONFIG_DB schema file `/schema.json` within it's Docker image.
+Every SONiC+ application **MUST** provide a valid CONFIG_DB schema file `/schema.json` within it's Docker image (req. 6).
 Below is the table of the fields that are used to describe the CONFIG_DB schema:
 
 Path | Type | Description | Value restriction
@@ -69,7 +70,7 @@ Path | Type | Description | Value restriction
 /keys/{{index}}/name | string | Name of the application | Lowercase letters, numbers and underscores, must start with "{{/name.upper()}}_"
 /keys/{{index}}/description | string | User friendly description
 /keys/{{index}}/fields | array | Array of fields' descriptions
-/keys/{{index}}/fields/{{index}}/name | string | Name of the field | Lowercase letters, numbers and underscores
+/keys/{{index}}/fields/{{index}}/name | string | Name of the field | Uppercase letters, numbers and underscores
 /keys/{{index}}/fields/{{index}}/description | string | User friendly description
 /keys/{{index}}/fields/{{index}}/type | string | Type of the field | One of string,int,intrange,choice
 /keys/{{index}}/fields/{{index}}/optional | bool | Indicates if the field is optional | True or False, optional - default is False
@@ -86,6 +87,83 @@ Path | Type | Description | Value restriction
 /global_fields/{{index}}/choice_list | array | Array of choices | Array items are strings, valid only if /global_fields/{{index}}/type is "choice"
 
 **TODO:** More fields types
+
+For example, below is the schema for an application that attaches a counter to a route, periodically polls those flow counters, and sends the values to some proprietary collector:
+```
+{
+    "name": "route_hit_report",
+    "description": "Attach counters to IPv4 routes and stream them to collectors",
+    "global_fields": [
+        {
+            "name": "enable",
+            "description": "Enable/disable the application",
+            "type": "bool"
+        },
+        {
+            "name": "poll_interval",
+            "description": "Polling interval in seconds",
+            "type": "int"
+        }
+    ],
+    "keys": [
+        {
+            "name": "ROUTE_HIT_REPORT_COUNTER",
+            "description": "Route counter",
+            "fields": [
+                {
+                    "name": "prefix",
+                    "description": "Route prefix to attach to",
+                    "type": "ipv4prefix"
+                }
+            ]
+        },
+        {
+            "name": "ROUTE_HIT_REPORT_COLLECTOR",
+            "description": "Remote collector configuration",
+            "fields": [
+                {
+                    "name": "address",
+                    "description": "Collector's IP address",
+                    "type": "ipv4address"
+                },
+                {
+                    "name": "port",
+                    "description": "Collector's port",
+                    "type": "intrange",
+                    "intmin": "1024",
+                    "intmax": "65000"
+                }
+            ]
+        }
+    ]
+}
+```
+
+SONiC+ application can provide a default configuration. It MUST be located in the Docker image path /default_config.json and will be validated against the provided schema. For example, The artifitial application above could have the following defaults:
+```
+{
+    "ROUTE_HIT_REPORT": {
+        "global": {
+            "enable": "False",
+            "polling_interval": "5"
+        }
+    },
+    "ROUTE_HIT_REPORT_COUNTER": {
+        "counter1" : {
+            "prefix": "1.1.0.0/16"
+        },
+        "counter1" : {
+            "prefix": "1.2.0.0/16"
+        }
+    },
+    ROUTE_HIT_REPORT_COLLECTOR": {
+        "my_collector" : {
+            "address": "10.10.10.10",
+            "port": "101010"
+        }
+    }
+}
+```
 
 ## Systemd integration
 Upon installation of SONiC+ application, a systemd service will be generated and enabled.
