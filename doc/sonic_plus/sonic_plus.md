@@ -1,8 +1,15 @@
 # SONiC+ Extensions Infrastructure
 ## Motivation
+The SONiC NOS was made with extendability in mind. This document focuses on making the process of extending SONiC as easy as possible.
+
+The main building block of SONiC is Docker. We are going to leverage the existing Docker and Docker Hub infrastructure and build SONiC+ on top of it.
+
+While Docker provides a tool for packaging an application and Docker Hub - for hosting it, it is not enough to just execute `docker pull` to make an application "look and feel" like a native SONiC application. SONiC+ aims at making the process of development and integration of 3-rd party applications with a native integration into SONiC. For that we need to provide SONiC+ with the hooks to connect every SONiC+ application with the SONiC native infrastructure, like access to CONIFG DB, SAI, CLI, REST APIs, logging, ISSU etc.
+The next section provides a ilst of requirements for the SONiC+ infrastructure.
+![alt text](https://github.com/marian-pritsak/SONiC/blob/patch-1/doc/sonic_plus/SONiC%2B.jpg "Sonic+")
 ## Requirements
 SONiC+ infrastructure must satisfy the requirements below to give the SONiC user the look and feel of the original SONiC image.
-1. The service provider can build a SONiC+ docker without building SONiC image
+1. The application provider can build a SONiC+ docker without building SONiC image
 2. User can download SONiC+ docker without building it
 3. User can browse available SONiC+ docker
 4. User can add a new SONiC+ docker repository
@@ -25,7 +32,7 @@ SONiC+ infrastructure must satisfy the requirements below to give the SONiC user
 The rest of the document provides with a means of satisfying those requirements.
 
 ## SONiC SDK docker
-The process of providing a new SONiC+ service consists of two steps - building a SONiC+ docker and downloading and using it on a switch.
+The process of providing a new SONiC+ application consists of two steps - building a SONiC+ docker and downloading and using it on a switch.
 This section focuses on the first step.
 
 SONiC has a set of libraries that provide us with tools for accessing configuration, calling SAI APIs, and logging (req. 6, 7, 8, 14).
@@ -51,7 +58,25 @@ Along with their -dev packages, and build packages like gcc, make, autotools etc
 ## Managing SONiC+ dockers
 TBD
 ## CONFIG_DB schema
-TBD
+Every SONiC+ application **MUST** provide a valid CONFIG_DB schema file `/schema.json` within it's Docker image.
+Below is the table of the fields that are used to describe the CONFIG_DB schema:
+
+Path | Type | Description | Value restriction
+--- | --- | --- | ---
+/name | string | Name of the application | Lowercase letters, numbers and underscores
+/description | string | User friendly description
+/keys | array | Array of keys' descriptions
+/keys/{{index}}/name | string | Name of the application | Lowercase letters, numbers and underscores, must start with "{{/name.upper()}}_"
+/keys/{{index}}/description | string | User friendly description
+/keys/{{index}}/fields | array | Array of fields' descriptions
+/keys/{{index}}/fields/{{index}}/name | string | Name of the field | Lowercase letters, numbers and underscores
+/keys/{{index}}/fields/{{index}}/description | string | User friendly description
+/keys/{{index}}/fields/{{index}}/type | string | Type of the field | One of string,int,intrange,choice
+/keys/{{index}}/fields/{{index}}/optional | bool | Indicates if the field is optional | True or False, optional - default is False
+/keys/{{index}}/fields/{{index}}/intmin | int | Min integer value | Valid only if /keys/{{index}}/fields/{{index}}/type is "intrange"
+/keys/{{index}}/fields/{{index}}/intmax | int | Max integer value | Valid only if /keys/{{index}}/fields/{{index}}/type is "intrange"
+/keys/{{index}}/fields/{{index}}/choice_list | array | Array of choices | Array items are strings, valid only if /keys/{{index}}/fields/{{index}}/type is "choice"
+
 ## Systemd integration
 TBD
 ## Shared resources
