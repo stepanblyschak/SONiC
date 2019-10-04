@@ -76,9 +76,19 @@ Path | Type | Description | Value restriction
 /keys/{{index}}/fields/{{index}}/intmin | int | Min integer value | Valid only if /keys/{{index}}/fields/{{index}}/type is "intrange"
 /keys/{{index}}/fields/{{index}}/intmax | int | Max integer value | Valid only if /keys/{{index}}/fields/{{index}}/type is "intrange"
 /keys/{{index}}/fields/{{index}}/choice_list | array | Array of choices | Array items are strings, valid only if /keys/{{index}}/fields/{{index}}/type is "choice"
+/keys/global_fields | array | Global configuration fields
+/global_fields/{{index}}/name | string | Name of the field | Lowercase letters, numbers and underscores
+/global_fields/{{index}}/description | string | User friendly description
+/global_fields/{{index}}/type | string | Type of the field | One of string,int,intrange,choice
+/global_fields/{{index}}/optional | bool | Indicates if the field is optional | True or False, optional - default is False
+/global_fields/{{index}}/intmin | int | Min integer value | Valid only if /global_fields/{{index}}/type is "intrange"
+/global_fields/{{index}}/intmax | int | Max integer value | Valid only if /global_fields/{{index}}/type is "intrange"
+/global_fields/{{index}}/choice_list | array | Array of choices | Array items are strings, valid only if /global_fields/{{index}}/type is "choice"
+
+**TODO:** More fields types
 
 ## Systemd integration
-TBD
+Upon installation of SONiC+ application, a systemd service will be generated and enabled.
 ## Shared resources
 TBD
 ## Shutdown notifications
