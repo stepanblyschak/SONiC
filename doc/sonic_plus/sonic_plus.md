@@ -166,7 +166,7 @@ For example, below is the schema for an application that attaches a counter to a
 }
 ```
 
-SONiC+ application can provide a default configuration. It MUST be located in the Docker image path /default_config.json and will be validated against the provided schema. For example, The artifitial application above could have the following defaults:
+SONiC+ application **CAN** provide a default configuration. It **MUST** be located in the Docker image path /default_config.json and will be validated against the provided schema. For example, The artifitial application above could have the following defaults:
 ```
 {
     "ROUTE_HIT_REPORT": {
@@ -265,12 +265,12 @@ TBD
 ## Versioning
 The SONiC+ application infrastructure is intended mainly for the general availability releases of SONiC. For every SONiC release, there will be a corresponding SONiC SDK Docker image.
 
-For example, the SONiC release 201910 will have a SONiC SDK Docker image with a tag 201910, so the developer can build an application docker from it:
+For example, the SONiC release 201910 will have a SONiC SDK Docker image with a tag 201910, so the developer **MUST** build an application docker from it:
 ```
 FROM sonic/sonic-sdk:201910
 ```
-Thanks to the Docker infrastructure, the SONiC+ application developer can maintain multiple versions of the application for the same release. The following rules **MUST** be followed with regards to SONiC+ application versions:
-* Docker tag for the application release MUST start with the SONiC release version.
+Thanks to the Docker infrastructure, the SONiC+ application developer **CAN** maintain multiple versions of the application for the same release. The following rules **MUST** be followed with regards to SONiC+ application versions:
+* Docker tag for the application release **MUST** start with the SONiC release version.
 * Latest version of the application for a given SONiC release **MUST** be also tagged as <SONiC relases>-latest to be used as default version if none is specified.
 
 For example, user can download the latest version of the application in the release 201910 using command `sonic-plus install my_app` which will pull the image `my_organization/my_app:201910-latest`, or be more specific and type `sonic-plus install my_app --version 2` which will pull the image `my_organization/my_app:201910-2`.
