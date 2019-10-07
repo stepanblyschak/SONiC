@@ -49,11 +49,11 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  addrepo     Add SONiC+ service repository
-  install     Install SONiC+ service
-  remove      Remove SONiC+ service
-  removerepo  Add SONiC+ service repository
-  show        Show SONiC+ available, installed services
+  addrepo     Add SONiC+ application repository
+  install     Install SONiC+ application
+  remove      Remove SONiC+ application
+  removerepo  Add SONiC+ application repository
+  show        Show SONiC+ available, installed applications
 
 $ sonic-plus show
 NAME        REPO                      DESCRIPTION               STATUS
