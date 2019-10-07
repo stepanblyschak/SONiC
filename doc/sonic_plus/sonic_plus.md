@@ -9,6 +9,8 @@ The next section provides a ilst of requirements for the SONiC+ infrastructure.
 
 When the SONiC+ will become a part of SONiC, the application developer will not have to integrate every application into the SONiC codebase but maintain them separately. This follows all the popular Linux distributions that allow for installation of external applications.
 
+This document while describing how SONiC+ will be implemented also provides reuirements and guidelines for SONiC+ application to follow, marked as **MUST** and **CAN** respectively.
+
 ![alt text](https://github.com/marian-pritsak/SONiC/blob/patch-1/doc/sonic_plus/SONiC%2B.jpg "Sonic+")
 ## Requirements
 SONiC+ infrastructure must satisfy the requirements below to give the SONiC user the look and feel of the original SONiC image.
@@ -35,6 +37,33 @@ SONiC+ infrastructure must satisfy the requirements below to give the SONiC user
 
 The rest of the document provides with a means of satisfying those requirements.
 
+## Managing SONiC+ dockers
+SONiC+ will provide a utility called `sonic_plus` that will provide a user with a unified way of managing the SONiC+ applications (req. 2, 3, 4, 5):
+```
+$ sonic-plus --help
+Usage: sonic-plus [OPTIONS] COMMAND [ARGS]...
+
+  SONiC+ management tool
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  addrepo     Add SONiC+ service repository
+  install     Install SONiC+ service
+  remove      Remove SONiC+ service
+  removerepo  Add SONiC+ service repository
+  show        Show SONiC+ available, installed services
+
+$ sonic-plus show
+NAME        REPO                      DESCRIPTION               STATUS
+------      ------------------------  ------------------------  -------------
+my_app1     my_org/my_app1            My application            Not installed
+my_app2     my_org/my_app1            My other application      Installed
+some_app3   some_org/some_app         Some 3-rd party app       Not installed
+```
+
+The user can add or remove the repositories of SONiC+ applications, install and uninstall them, and list what's available/installed.
 ## SONiC SDK docker
 The process of providing a new SONiC+ application consists of two steps - building a SONiC+ docker and downloading and using it on a switch.
 This section focuses on the first step.
@@ -56,8 +85,6 @@ The sonic-sdk docker has all the swss SDK libraries like:
 
 Along with their -dev packages, and build packages like gcc, make, autotools etc.
 
-## Managing SONiC+ dockers
-TBD
 ## CONFIG_DB schema
 Every SONiC+ application **MUST** provide a valid CONFIG_DB schema file `/schema.json` within it's Docker image (req. 6).
 Below is the table of the fields that are used to describe the CONFIG_DB schema:
@@ -191,8 +218,8 @@ For example, the SONiC release 201910 will have a SONiC SDK Docker image with a 
 ```
 FROM sonic/sonic-sdk:201910
 ```
-Thanks to the Docker infrastructure, the SONiC+ application developer can maintain multiple versions of the application for the same release. The following rules MUST be followed with regards to SONiC+ application versions:
+Thanks to the Docker infrastructure, the SONiC+ application developer can maintain multiple versions of the application for the same release. The following rules **MUST** be followed with regards to SONiC+ application versions:
 * Docker tag for the application release MUST start with the SONiC release version.
-* Latest version of the application for a given SONiC release MUST be also tagged as <SONiC relases>-latest to be used as default version if none is specified.
+* Latest version of the application for a given SONiC release **MUST** be also tagged as <SONiC relases>-latest to be used as default version if none is specified.
 
 For example, user can download the latest version of the application in the release 201910 using command `sonic-plus install my_app` which will pull the image `my_organization/my_app:201910-latest`, or be more specific and type `sonic-plus install my_app --version 2` which will pull the image `my_organization/my_app:201910-2`.
