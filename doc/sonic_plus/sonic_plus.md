@@ -1,5 +1,7 @@
 # SONiC+ Applications Extensions Infrastructure
 ## Table of Contents
+[Revision Table](#revision-table)
+
 [Motivation](#motivation)
 
 [Requirements](#requirements)
@@ -21,6 +23,12 @@
 [Entrypoint](#entrypoint)
 
 [Sharing State With Orchagent](#sharing-state-with-orchagent)
+
+## Revision Table
+
+| Rev |     Date    |       Author       | Change Description                |
+|:---:|:-----------:|:------------------:|-----------------------------------|
+|1.0|10/7/2019|Marian Pritsak|Initial Version
 
 ## Motivation
 The SONiC NOS was made with extendability in mind. This document focuses on making the process of extending SONiC as easy as possible.
