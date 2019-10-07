@@ -1,4 +1,4 @@
-# SONiC+ Extensions Infrastructure
+# SONiC+ Applications Extensions Infrastructure
 ## Motivation
 The SONiC NOS was made with extendability in mind. This document focuses on making the process of extending SONiC as easy as possible.
 
