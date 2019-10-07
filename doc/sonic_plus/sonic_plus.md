@@ -4,7 +4,7 @@
 
 [Requirements](#requirements)
 
-[Managing SONiC+ Applications](#managing-sonic+-applications)
+[Managing SONiC+ Applications](#managing-sonic-applications)
 
 [SONiC SDK Docker](#sonic-sdk-docker)
 
