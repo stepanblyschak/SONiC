@@ -299,7 +299,7 @@ To be able to make SAI calls, it is not enough just to have an access to the ASI
 
 The solution to the problem is to move the orchagent state out of the process. But the challenge is how to make it automatically with minimal changes to the orchagent code. The proposed mechanism is to introduce a new mapping in the ASIC DB called CLIENT_COOKIE_TO_OID_MAP. The libsairedis API will be extended with a function `set_client_cookie(string cookie)` that will make libsairedis add a new entry of the format `<cookie>|<SAI OID>` into a CLIENT_COOKIE_TO_OID_MAP. In the orchagent the handling of all changes in the APP_DB `while (it != consumer.m_toSync.end()) {` will start with `set_client_cookie(kfvKey(it->second)` which will fill CLIENT_COOKIE_TO_OID_MAP with entries `APP_DB_TABLE:KEY|SAI_OID` upon each SAI object created within this context. Every handler will reset the value of the cookie to the APP_DB key that it is processing at the moment.
 
-![alt text](https://github.com/marian-pritsak/SONiC/blob/patch-1/doc/sonic_plus/SONiC%2B%20share.jpg "Sonic+ orch")
+![alt text](https://github.com/marian-pritsak/SONiC/blob/patch-1/doc/sonic_plus/SONiC%2B%20shared.jpg "Sonic+ orch")
 
 ## Versioning
 The SONiC+ application infrastructure is intended mainly for the general availability releases of SONiC. For every SONiC release, there will be a corresponding SONiC SDK Docker image.
