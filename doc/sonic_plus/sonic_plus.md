@@ -24,6 +24,8 @@
 
 [Sharing State With Orchagent](#sharing-state-with-orchagent)
 
+[SONiC+ Certification](#sonic-certification)
+
 ## Revision Table
 
 | Rev |     Date    |       Author       | Change Description                |
@@ -313,3 +315,6 @@ Thanks to the Docker infrastructure, the SONiC+ application developer **CAN** ma
 * Latest version of the application for a given SONiC release **MUST** be also tagged as <SONiC relases>-latest to be used as default version if none is specified.
 
 For example, user can download the latest version of the application in the release 201910 using command `sonic-plus install my_app` which will pull the image `my_organization/my_app:201910-latest`, or be more specific and type `sonic-plus install my_app --version 2` which will pull the image `my_organization/my_app:201910-2`.
+
+## SONiC+ Certification
+TODO
