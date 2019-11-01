@@ -44,7 +44,7 @@ The next section provides a ilst of requirements for the SONiC+ infrastructure.
 
 When the SONiC+ will become a part of SONiC, the application developer will not have to integrate every application into the SONiC codebase but maintain them separately. This follows all the popular Linux distributions that allow for installation of external applications.
 
-This document while describing how SONiC+ will be implemented also provides reuirements and guidelines for SONiC+ application to follow, marked as **MUST** and **CAN** respectively.
+This document while describing how SONiC+ will be implemented also provides reuirements and guidelines for SONiC+ application to follow, marked as **MUST**, **SHOULD** and **CAN** respectively.
 
 ![alt text](https://github.com/marian-pritsak/SONiC/blob/patch-1/doc/sonic_plus/SONiC%2B.jpg "Sonic+")
 ## Requirements
