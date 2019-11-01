@@ -82,11 +82,13 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  addrepo     Add SONiC+ application repository
-  install     Install SONiC+ application
-  remove      Remove SONiC+ application
-  removerepo  Add SONiC+ application repository
-  show        Show SONiC+ available, installed applications
+  addrepo        Add SONiC+ application repository
+  install        Install SONiC+ application
+  remove         Remove SONiC+ application
+  removerepo     Add SONiC+ application repository
+  show           Show SONiC+ available, installed applications
+  addregistry    Add SONiC+ docker registry
+  removeregistry Remove SONiC+ docker registry
 
 $ sonic-plus show
 NAME        REPO                      DESCRIPTION               STATUS
@@ -149,11 +151,11 @@ Path | Type | Description | Value restriction
 
 **TODO:** More fields types
 
-For example, below is the schema for an application that attaches a counter to a route, periodically polls those flow counters, and sends the values to some proprietary collector:
+For example, below is the schema for an application that monitors CPU time for select processes and reports the statistics to the remote collectors:
 ```
 {
-    "name": "route_hit_report",
-    "description": "Attach counters to IPv4 routes and stream them to collectors",
+    "name": "cpu_time_report",
+    "description": "Read process CPU time and stream them to collectors",
     "global_fields": [
         {
             "name": "enable",
@@ -168,18 +170,18 @@ For example, below is the schema for an application that attaches a counter to a
     ],
     "keys": [
         {
-            "name": "ROUTE_HIT_REPORT_COUNTER",
-            "description": "Route counter",
+            "name": "PROCESS",
+            "description": "Process CPU time counter",
             "fields": [
                 {
-                    "name": "prefix",
-                    "description": "Route prefix to attach to",
-                    "type": "ipv4prefix"
+                    "name": "name",
+                    "description": "process name",
+                    "type": "string"
                 }
             ]
         },
         {
-            "name": "ROUTE_HIT_REPORT_COLLECTOR",
+            "name": "CPU_REPORT_COLLECTOR",
             "description": "Remote collector configuration",
             "fields": [
                 {
@@ -203,21 +205,21 @@ For example, below is the schema for an application that attaches a counter to a
 SONiC+ application **CAN** provide a default configuration. It **MUST** be located in the Docker image path /default_config.json and will be validated against the provided schema. For example, The artifitial application above could have the following defaults:
 ```
 {
-    "ROUTE_HIT_REPORT": {
+    "CPU_TIME_REPORT": {
         "global": {
             "enable": "False",
             "polling_interval": "5"
         }
     },
-    "ROUTE_HIT_REPORT_COUNTER": {
+    "CPU_TIME_REPORT_PROCESS": {
         "counter1" : {
-            "prefix": "1.1.0.0/16"
+            "name": "syncd"
         },
-        "counter1" : {
-            "prefix": "1.2.0.0/16"
+        "counter2" : {
+            "name": "my_app"
         }
     },
-    ROUTE_HIT_REPORT_COLLECTOR": {
+    "CPU_TIME_REPORT_COLLECTOR": {
         "my_collector" : {
             "address": "10.10.10.10",
             "port": "101010"
@@ -232,14 +234,14 @@ The schema described above the the only mean of talinkng to/configuring the SONi
 For every SONiC+ application, other interfaces are generated automatically based on the schema file provided. For example, the application from the previous section will have the following CLI commands available:
 
 ```
-$ route_hit_report enable [True/False]
-$ route_hit_report poll_interval [INTERVAL]
-$ route_hit_report create counter [NAME] [PREFIX]
-$ route_hit_report create collector [NAME] [ADDRESS] [PORT]
-$ route_hit_report remove counter [NAME]
-$ route_hit_report remove collector [NAME]
-$ route_hit_report show counter
-$ route_hit_report show collector
+$ cpu_time_report enable [True/False]
+$ cpu_time_report poll_interval [INTERVAL]
+$ cpu_time_report create counter [NAME] [NAME]
+$ cpu_time_report create collector [NAME] [ADDRESS] [PORT]
+$ cpu_time_report remove counter [NAME]
+$ cpu_time_report remove collector [NAME]
+$ cpu_time_report show counter
+$ cpu_time_report show collector
 ```
 
 ## Systemd Integration
@@ -304,17 +306,18 @@ The solution to the problem is to move the orchagent state out of the process. B
 ![alt text](https://github.com/marian-pritsak/SONiC/blob/patch-1/doc/sonic_plus/SONiC%2B%20shared.jpg "Sonic+ orch")
 
 ## Versioning
-The SONiC+ application infrastructure is intended mainly for the general availability releases of SONiC. For every SONiC release, there will be a corresponding SONiC SDK Docker image.
+For every SONiC release, there will be a corresponding SONiC SDK Docker image. SONiC SDK **SHOULD** keep it's APIs backward compatible, so that SONiC+ application can run on top of the newer images, nightly SONiC builds etc.
 
-For example, the SONiC release 201910 will have a SONiC SDK Docker image with a tag 201910, so the developer **MUST** build an application docker from it:
+For example, the SONiC release 201910 will have a SONiC SDK Docker image with a tag 201910, so the developer **CAN** build an application docker from it:
 ```
 FROM sonic/sonic-sdk:201910
 ```
-Thanks to the Docker infrastructure, the SONiC+ application developer **CAN** maintain multiple versions of the application for the same release. The following rules **MUST** be followed with regards to SONiC+ application versions:
-* Docker tag for the application release **MUST** start with the SONiC release version.
-* Latest version of the application for a given SONiC release **MUST** be also tagged as <SONiC relases>-latest to be used as default version if none is specified.
 
-For example, user can download the latest version of the application in the release 201910 using command `sonic-plus install my_app` which will pull the image `my_organization/my_app:201910-latest`, or be more specific and type `sonic-plus install my_app --version 2` which will pull the image `my_organization/my_app:201910-2`.
+In to the Docker infrastructure, the SONiC+ application developer **CAN** maintain multiple versions of the application. The following rules **MUST** be followed with regards to SONiC+ application versions:
+* Docker tag for the application release **MUST** start with the SONiC SDK image release version.
+* Latest version of the application  **MUST** be also tagged as "latest" to be used as default version if none is specified.
+
+For example, user can download the latest version of the application in the release 201910 using command `sonic-plus install my_app` which will pull the image `my_organization/my_app:latest`, or be more specific and type `sonic-plus install my_app --version 201910-2` which will pull the image `my_organization/my_app:201910-2`.
 
 ## SONiC+ Certification
 TODO
