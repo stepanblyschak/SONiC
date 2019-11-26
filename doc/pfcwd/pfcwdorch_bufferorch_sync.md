@@ -18,17 +18,17 @@ PFC WD action handler flow (restore):
 
 Since, there are two Orchs - PfcWdOrch and BufferOrch which can change PG/queue configuration it may lead to a problem in specific scenarios:
 
-#### Warm reboot flow
+##### Warm reboot flow
 
 If **orchagent** starts before **buffermgrd** and BufferOrch gets initialized before **buffermgrd**, 
 **buffermgrd** will send initial update.
 In case storm started before warm reboot and is ongoing during warm start and after orchagent reconciled, **buffermgrd** initial update will cause BufferOrch to override zero buffer profile on PG.
 
-#### Buffer configuration changes when storm is ongoing
+##### Buffer configuration changes when storm is ongoing
 
 Similar will happen when user is changing configuration during storm; moreover since PFC WD action handler saved the original profile, after storm is finished, original profile will be restored, so DB and HW will be out of sync.
 
-## Quick fix
+#### Quick fix
 
 In **buffermgrd** add a condition - if we are trying to set PG profile that is already set according to DB, skip setting the same profile:
 
@@ -47,7 +47,7 @@ In this case, buffermgrd will not set PG profile if it is already set to desired
 However, this will not fix scenario when buffer configuration is changed during storm.
 
 
-## Solution proposal
+#### Solution proposal
 
 Since there are two configuration producers for same objects, there should be a syncronization mechanism.
 The idea is that PFC WD action handler should protect PG/queue profile from being changed until storm is restored.
@@ -61,6 +61,14 @@ Once BufferOrch is notified from PFC WD action handler that PG/queue is unlocked
 
 
 
+### High level flow
 
+Storm:
+
+![Storm flow](https://github.com/stepanblyschak/SONiC/blob/pfcwd_bufferorch_sync/doc/pfcwd/storm.svg)
+
+Restore:
+
+![Restore flow](https://github.com/stepanblyschak/SONiC/blob/pfcwd_bufferorch_sync/doc/pfcwd/restore.svg)
 
 
