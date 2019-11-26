@@ -58,10 +58,7 @@ If BufferOrch receives update on PG/queue that is protected BufferOrch will add 
 
 Once BufferOrch is notified from PFC WD action handler that PG/queue is unlocked, BufferOrch process pending list.
 
-
-
-
-### High level flow
+#### High level flow
 
 Storm:
 
@@ -72,3 +69,23 @@ Restore:
 ![Restore flow](https://github.com/stepanblyschak/SONiC/blob/pfcwd_bufferorch_sync/doc/pfcwd/restore.svg)
 
 
+#### Implementation
+
+BufferOrch should implement Observer interface with update method to receive notification from PFC WD action handler about storm.
+
+A new subject type PORT_PG_QUEUE_LOCK_CHANGE should be added:
+
+```c++
+
+struct PortPgQueueLock
+{
+    enum LockStateUpdate {
+        LOCKED,
+        UNLOCKED,
+    } lockState;
+    sai_object_id_t pgId;
+    sai_object_id_t queueId;
+};
+```
+
+BufferOrch will save pending PG/queue profiles to a map.
