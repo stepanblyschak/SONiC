@@ -2,8 +2,8 @@
 
 ## Hardware management suite and sx_core driver interaction
 
-sx_core driver now implements generation of ADD/REMOVE udev event on sx_core_init_one_pci/sx_core_remove_one_pci.
-sx_core_init_one_pci is called when ASIC reset is done.
+sx_core driver now implements generation of ADD/REMOVE udev event on sx_core_init_one_pci/sx_core_remove_one_pci.<br>
+sx_core_init_one_pci is called when ASIC reset is done.<br>
 hw-mgmt package relies on those events to call chipup/chipdown internally without OS interaction.
 
 ## New flows
