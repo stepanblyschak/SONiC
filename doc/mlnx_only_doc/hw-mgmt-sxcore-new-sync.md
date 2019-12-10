@@ -186,8 +186,11 @@ admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 
 # Mannual testing
 
-Verification: mlxsw_minimal is not active while ASIC reset is performed and is activated only once, no errors in dmesg/syslog,
-the number of sfp netdevs is the number of modules in system regardless of port breakout configuration.
+Verification
+- mlxsw_minimal is not active while ASIC reset is performed
+- mlxsw_minimal is activated only once
+- no errors in dmesg/syslog related to sx_core/mlxsw_minimal
+- the number of sfp netdevs is the number of modules in system regardless of port breakout configuration.
 
 1) cold boot
 2) fast boot
