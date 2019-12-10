@@ -1,6 +1,6 @@
 # ASIC reset and access syncronization flow update in SONiC
 
-# Hardware management suite and sx_core driver interaction
+## Hardware management suite and sx_core driver interaction
 
 sx_core driver now implements generation of ADD/REMOVE udev event on sx_core_init_one_pci/sx_core_remove_one_pci.
 sx_core_init_one_pci is called when ASIC reset is done.
