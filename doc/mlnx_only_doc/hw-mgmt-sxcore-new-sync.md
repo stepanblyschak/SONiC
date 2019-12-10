@@ -129,6 +129,22 @@ admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 1) sxdkernel start -> does not perform ASIC reset but generates sxcore ADD udev event -> hw-mgmt starts mlxsw_minimal driver
 2) SAI skips CTRL_CMD_RESET.
 
+Expected dmesg logs with added debug prints for ADD/REMOVE udev events action handler:
+
+```
+admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
+[   32.277141] sx_core 0000:03:00.0: reset trigger is already set
+[   32.277142] Did not perform chip reset in this phase
+[   32.408965] on sxcore event => chipup starting
+[   32.950836] mlxsw_minimal 2-0048: mlxsw_minimal mb size=100 off=0x00085058 out mb size=100 off=0x00085158
+[   33.170651] mlxsw_minimal 2-0048: The firmware version 13.2000.2602
+[   34.777948] mlxsw_minimal 2-0048: Firmware revision: 13.2000.2602
+[   34.777971] i2c i2c-2: new_device: Instantiated device mlxsw_minimal at 0x48
+[   34.875753] on sxcore event => chipup finished
+[   40.857270] mlxsw_minimal 2-0048 sfp2: renamed from eth3
+...
+```
+
 ### Reload:
 
 1) sxdkernel stop -> generates sxcore REMOVE udev event -> hw-mgmt removes mlxsw_minimal driver
