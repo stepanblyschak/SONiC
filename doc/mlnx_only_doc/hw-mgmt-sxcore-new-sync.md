@@ -70,11 +70,35 @@ One is a fake one from sxdkernel start and one about real ASIC reset
 1) sxdkernel start -> does not perform ASIC reset but generates sxcore ADD udev event -> hw-mgmt starts mlxsw_minimal driver
 2) SAI skips CTRL_CMD_RESET.
 
-### reload flow:
+### Reload:
 
 1) sxdkernel stop -> generates sxcore REMOVE udev event -> hw-mgmt removes mlxsw_minimal driver
 2) same as cold boot
 
+Expected dmesg logs with added debug prints for ADD/REMOVE udev events action handler:
+
+```
+admin@sonic:~$ sudo config reload -y
+...
+admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
+[  445.597806] on sxcore event => chipdown starting
+[  445.656260] i2c i2c-2: delete_device: Deleting device mlxsw_minimal at 0x48
+[  446.411368] on sxcore event => chipdown finished
+[  485.383556] sx_core 0000:01:00.0: reset trigger is already set
+[  485.383557] Performing chip reset in this phase
+[  485.383558] sx_core: performing SW reset
+[  485.488974] sx_core 0000:01:00.0: SX_CMD_ACCESS_REG. Got FW status 0x26 after SW reset
+[  487.496922] reset: system_enabled change to [true], time: 0[ms]
+[  487.573794] on sxcore event => chipup starting
+[  487.926786] mlxsw_minimal 2-0048: mlxsw_minimal mb size=100 off=0x00085058 out mb size=100 off=0x00085158
+[  488.223478] mlxsw_minimal 2-0048: The firmware version 13.2000.2602
+[  493.362015] mlxsw_minimal 2-0048: Firmware revision: 13.2000.2602
+[  493.362040] i2c i2c-2: new_device: Instantiated device mlxsw_minimal at 0x48
+[  493.449950] on sxcore event => chipup finished
+[  495.602928] mlxsw_minimal 2-0048 sfp3: renamed from eth3
+...
+
+```
 
 
 # Mannual testing
