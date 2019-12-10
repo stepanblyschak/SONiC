@@ -6,6 +6,11 @@ sx_core driver now implements generation of ADD/REMOVE udev event on sx_core_ini
 sx_core_init_one_pci is called when ASIC reset is done.<br>
 hw-mgmt package relies on those events to call chipup/chipdown internally without OS interaction.
 
+# Hardware management suite and MGPIR register
+
+Regardless of the state of PMLP register, mlxsw_minimal driver now uses MGPIR register which has static information about the number of modules.
+No synchronizations based on PortInitDone is required here.
+
 ## New flows
 
 ### Cold Boot
@@ -37,10 +42,7 @@ One is a fake one from sxdkernel start and one about real ASIC reset
 1) sxdkernel stop -> generates sxcore REMOVE udev event -> hw-mgmt removes mlxsw_minimal driver
 2) same as cold boot
 
-# hw-mgmt and MGPIR
 
-Regardless of the state of PMLP register, mlxsw_minimal driver now uses MGPIR register which has static information about the number of modules.
-No synchronizations based on PortInitDone is required here.
 
 # Mannual testing
 
