@@ -14,7 +14,7 @@ hw-mgmt package relies on those events to call chipup/chipdown internally withou
 
 ### Fast Boot:
 
-![Cold Boot flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-fast-boot.svg)
+![Fast Boot flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-fast-boot.svg)
 
 fast boot is special because it will receive two sxcore ADD udev events.
 One is a fake one from sxdkernel start and one about real ASIC reset
@@ -23,7 +23,9 @@ One is a fake one from sxdkernel start and one about real ASIC reset
 2) sxdkernel start -> does not perform ASIC reset but generates sxcore ADD udev event -> hw-mgmt ignores
 3) SAI executes CTRL_CMD_RESET which resets ASIC -> sxcore ADD udev event is generated -> hw-mgmt starts mlxsw_mininal driver.
 
-### warm boot:
+### Warm boot:
+
+![Warm Boot flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-warm-boot.svg)
 
 1) sxdkernel start -> does not perform ASIC reset but generates sxcore ADD udev event -> hw-mgmt starts mlxsw_minimal driver
 2) SAI skips CTRL_CMD_RESET.
