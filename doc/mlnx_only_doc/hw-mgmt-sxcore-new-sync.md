@@ -19,6 +19,21 @@ No synchronizations based on PortInitDone is required here.
 1) sxdkernel start -> performs ASIC reset and generates sxcore ADD udev event -> hw-mgmt starts mlxsw_minimal driver
 2) SAI executes CTRL_CMD_RESET which has no effect on ASIC reset.
 
+Expected dmesg logs:
+
+```
+admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal'
+[   30.802720] sx_core 0000:01:00.0: reset trigger is already set
+[   30.802721] Performing chip reset in this phase
+[   30.802722] sx_core: performing SW reset
+[   30.910571] sx_core 0000:01:00.0: SX_CMD_ACCESS_REG. Got FW status 0x26 after SW reset
+[   32.930473] reset: system_enabled change to [true], time: 0[ms]
+[   33.182523] mlxsw_minimal 2-0048: mlxsw_minimal mb size=100 off=0x00085058 out mb size=100 off=0x00085158
+[   33.394587] mlxsw_minimal 2-0048: The firmware version 13.2000.2602
+[   39.066115] mlxsw_minimal 2-0048: Firmware revision: 13.2000.2602
+[   39.066899] i2c i2c-2: new_device: Instantiated device mlxsw_minimal at 0x48
+```
+
 ### Fast Boot:
 
 ![Fast Boot flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-fast-boot.svg)
