@@ -49,6 +49,40 @@ The race condition can be triggered by two sequential sx_core ```pcidrv_restart`
 
 ```bash
 root@sonic:~$ echo pcidrv_restart > /proc/mlx_sx/sx_core ; echo pcidrv_restart > /proc/mlx_sx/sx_core
+root@sonic:~$ dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
+[  978.689525] on sxcore event => chipdown starting
+[  978.744434] i2c i2c-2: delete_device: Deleting device mlxsw_minimal at 0x48
+[  979.518184] on sxcore event => chipdown finished
+[  979.603042] sx_core 0000:01:00.0: reset trigger is already set
+[  979.603043] Performing chip reset in this phase
+[  979.603043] sx_core: performing SW reset
+[  979.707497] sx_core 0000:01:00.0: SX_CMD_ACCESS_REG. Got FW status 0x26 after SW reset
+[  981.738972] reset: system_enabled change to [true], time: 0[ms]
+[  981.786066] on sxcore event => chipup starting
+[  981.852707] mlxsw_minimal 2-0048: mlxsw_minimal mb size=100 off=0x00085058 out mb size=100 off=0x00085158
+[  982.015140] mlxsw_minimal 2-0048: The firmware version 13.2000.2602
+[  983.793388] sx_core 0000:01:00.0: reset trigger is already set
+[  983.793390] Performing chip reset in this phase
+[  983.793391] sx_core: performing SW reset
+[  983.855897] mlxsw_minimal 2-0048: Reg cmd access status failed (status=7f(*UNKNOWN*))
+[  983.898364] sx_core 0000:01:00.0: SX_CMD_ACCESS_REG. Got FW status 0x26 after SW reset
+[  983.949838] mlxsw_minimal 2-0048: Reg cmd access failed (reg_id=900a(mtmp),type=query)
+[  984.686132] mlxsw_minimal 2-0048: Fail to register core bus
+[  984.753047] mlxsw_minimal: probe of 2-0048 failed with error -5
+[  984.753056] i2c i2c-2: new_device: Instantiated device mlxsw_minimal at 0x48
+[  984.758705] on sxcore event => chipup finished
+[  984.763013] i2c i2c-2: delete_device: Deleting device mlxsw_minimal at 0x48
+[  984.798783] on sxcore event => chipdown starting
+[  984.856735] on sxcore event => chipdown finished
+[  985.929763] reset: system_enabled change to [true], time: 0[ms]
+[  985.979618] on sxcore event => chipup starting
+[  986.041110] mlxsw_minimal 2-0048: mlxsw_minimal mb size=100 off=0x00085058 out mb size=100 off=0x00085158
+[  986.204994] mlxsw_minimal 2-0048: The firmware version 13.2000.2602
+[  989.915397] mlxsw_minimal 2-0048: Firmware revision: 13.2000.2602
+[  989.915421] i2c i2c-2: new_device: Instantiated device mlxsw_minimal at 0x48
+[  989.921089] on sxcore event => chipup finished
+[  994.252576] mlxsw_minimal 2-0048 sfp1: renamed from eth1
+
 ```
 
 
