@@ -48,7 +48,7 @@ Even though ```sxdkernel stop``` will send REMOVE udev event - it doesn't mean h
 The race condition can be triggered by two sequential sx_core ```pcidrv_restart```'s:
 
 ```bash
-root@sonic:~# echo pcidrv_restart > /proc/mlx_sx/sx_core ; echo pcidrv_restart > /proc/mlx_sx/sx_core
+root@sonic:~$ echo pcidrv_restart > /proc/mlx_sx/sx_core ; echo pcidrv_restart > /proc/mlx_sx/sx_core
 ```
 
 
