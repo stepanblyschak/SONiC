@@ -45,6 +45,12 @@ An ADD event is used only to start mlxsw_minimal driver, but it doesn't mean sxc
 With current timings - mlxsw_minimal takes ~2 sec to read and finish SFP device creation. In case it takes time which is long enough in order to execute another ```systemctl restart swss``` ASIC reset might happen while mlxsw_minimal accesses FW.
 Even though ```sxdkernel stop``` will send REMOVE udev event - it doesn't mean hw-mgmt will cancel mlxsw_minimal driver in time before reset happens.
 
+The race condition can be triggered by two sequential sx_core ```pcidrv_restart```'s:
+
+```
+root@sonic:~# echo pcidrv_restart > /proc/mlx_sx/sx_core ; echo pcidrv_restart > /proc/mlx_sx/sx_core
+```
+
 
 ### Fast Boot:
 
