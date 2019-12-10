@@ -82,7 +82,7 @@ root@sonic:~$ dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 [  989.915421] i2c i2c-2: new_device: Instantiated device mlxsw_minimal at 0x48
 [  989.921089] on sxcore event => chipup finished
 [  994.252576] mlxsw_minimal 2-0048 sfp1: renamed from eth1
-
+...
 ```
 
 
