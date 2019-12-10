@@ -147,6 +147,14 @@ admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 
 ### Reload:
 
+#### Shutdown
+
+![Syncd shutdown flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-syncd-stop.svg)
+
+#### Start - same as in cold boot mode
+
+![Syncd startup flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-cold-boot.svg)
+
 1) sxdkernel stop -> generates sxcore REMOVE udev event -> hw-mgmt removes mlxsw_minimal driver
 2) same as cold boot
 
