@@ -4,7 +4,7 @@ sx_core driver now implements generation of ADD/REMOVE udev event on sx_core_ini
 sx_core_init_one_pci is called when ASIC reset is done.
 hw-mgmt package relies on those events to call chipup/chipdown internally without OS interaction.
 
-## new flow
+## New flows
 
 ### Cold Boot
 ![Cold Boot flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-cold-boot.svg)
