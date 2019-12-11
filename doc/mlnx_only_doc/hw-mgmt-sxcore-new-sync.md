@@ -3,31 +3,33 @@
 # Table of content
 - [ASIC reset and access syncronization flow update in SONiC](#asic-reset-and-access-syncronization-flow-update-in-sonic)
 - [Table of content](#table-of-content)
-  - [Hardware management suite and sx_core driver interaction](#hardware-management-suite-and-sxcore-driver-interaction)
-  - [Hardware management suite and MGPIR register](#hardware-management-suite-and-mgpir-register)
-  - [New flows](#new-flows)
-    - [Cold Boot](#cold-boot)
-    - [Fast Boot:](#fast-boot)
-    - [Warm boot:](#warm-boot)
-    - [Reload:](#reload)
-      - [Shutdown](#shutdown)
-      - [Start - same as in cold boot mode](#start---same-as-in-cold-boot-mode)
+- [Hardware management suite and sx_core driver interaction](#hardware-management-suite-and-sxcore-driver-interaction)
+- [Hardware management suite and MGPIR register](#hardware-management-suite-and-mgpir-register)
+- [New flows](#new-flows)
+  - [Cold Boot](#cold-boot)
+  - [Fast Boot:](#fast-boot)
+  - [Warm boot:](#warm-boot)
+  - [Reload](#reload)
+    - [Shutdown](#shutdown)
+    - [Start - same as in cold boot mode](#start---same-as-in-cold-boot-mode)
 - [Mannual testing](#mannual-testing)
 - [Automated testing](#automated-testing)
-## Hardware management suite and sx_core driver interaction
+
+
+# Hardware management suite and sx_core driver interaction
 
 sx_core driver now implements generation of ADD/REMOVE udev event on sx_core_init_one_pci/sx_core_remove_one_pci.<br>
 sx_core_init_one_pci is called when ASIC reset is done.<br>
 hw-mgmt package relies on those events to call chipup/chipdown internally without OS interaction.
 
-## Hardware management suite and MGPIR register
+# Hardware management suite and MGPIR register
 
 Regardless of the state of PMLP register, mlxsw_minimal driver now uses MGPIR register which has static information about the number of modules.
 No synchronizations based on PortInitDone is required here.
 
-## New flows
+# New flows
 
-### Cold Boot
+## Cold Boot
 ![Cold Boot flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-cold-boot.svg)
 
 1) sxdkernel start -> performs ASIC reset and generates sxcore ADD udev event -> hw-mgmt starts mlxsw_minimal driver
@@ -100,7 +102,7 @@ root@sonic:~$ dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 ```
 
 
-### Fast Boot:
+## Fast Boot:
 
 ![Fast Boot flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-fast-boot.svg)
 
@@ -136,7 +138,7 @@ admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 ...
 ```
 
-### Warm boot:
+## Warm boot:
 
 ![Warm Boot flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-warm-boot.svg)
 
@@ -159,13 +161,13 @@ admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 ...
 ```
 
-### Reload:
+## Reload
 
-#### Shutdown
+### Shutdown
 
 ![Syncd shutdown flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-syncd-stop.svg)
 
-#### Start - same as in cold boot mode
+### Start - same as in cold boot mode
 
 ![Syncd startup flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-cold-boot.svg)
 
