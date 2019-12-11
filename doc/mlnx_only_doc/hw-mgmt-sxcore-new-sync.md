@@ -10,8 +10,6 @@
   - [Fast Boot:](#fast-boot)
   - [Warm boot:](#warm-boot)
   - [Reload](#reload)
-   - [Shutdown](#shutdown)
-   - [Start - same as in cold boot mode](#start---same-as-in-cold-boot-mode)
 - [Mannual testing](#mannual-testing)
 - [Automated testing](#automated-testing)
 
@@ -163,11 +161,11 @@ admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 
 ## Reload
 
-### Shutdown
+Shutdown
 
 ![Syncd shutdown flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-syncd-stop.svg)
 
-### Start - same as in cold boot mode
+Start - same as in cold boot mode
 
 ![Syncd startup flow](/doc/mlnx_only_doc/hw-mgmt-sxcore-cold-boot.svg)
 
