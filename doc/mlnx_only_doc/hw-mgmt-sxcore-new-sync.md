@@ -10,8 +10,8 @@
   - [Fast Boot:](#fast-boot)
   - [Warm boot:](#warm-boot)
   - [Reload](#reload)
-    - [Shutdown](#shutdown)
-    - [Start - same as in cold boot mode](#start---same-as-in-cold-boot-mode)
+   - [Shutdown](#shutdown)
+   - [Start - same as in cold boot mode](#start---same-as-in-cold-boot-mode)
 - [Mannual testing](#mannual-testing)
 - [Automated testing](#automated-testing)
 
@@ -111,7 +111,7 @@ One is a fake one from sxdkernel start and one about real ASIC reset
 
 1) hw-mgmt chiupdis -> tell hw-mgmt to ignore exactly one sxcore ADD udev event
 2) sxdkernel start -> does not perform ASIC reset but generates sxcore ADD udev event -> hw-mgmt ignores
-3) SAI executes CTRL_CMD_RESET which resets ASIC -> sxcore ADD udev event is generated -> hw-mgmt starts mlxsw_mininal driver.
+3) SAI executes CTRL_CMD_RESET which resets ASIC -> sxcore REMOVE then ADD udev event is generated -> hw-mgmt starts mlxsw_mininal driver.
 
 Expected dmesg logs with added debug prints for ADD/REMOVE udev events action handler:
 
