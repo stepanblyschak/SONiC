@@ -1,5 +1,19 @@
 # ASIC reset and access syncronization flow update in SONiC
 
+# Table of content
+- [ASIC reset and access syncronization flow update in SONiC](#asic-reset-and-access-syncronization-flow-update-in-sonic)
+- [Table of content](#table-of-content)
+  - [Hardware management suite and sx_core driver interaction](#hardware-management-suite-and-sxcore-driver-interaction)
+  - [Hardware management suite and MGPIR register](#hardware-management-suite-and-mgpir-register)
+  - [New flows](#new-flows)
+    - [Cold Boot](#cold-boot)
+    - [Fast Boot:](#fast-boot)
+    - [Warm boot:](#warm-boot)
+    - [Reload:](#reload)
+      - [Shutdown](#shutdown)
+      - [Start - same as in cold boot mode](#start---same-as-in-cold-boot-mode)
+- [Mannual testing](#mannual-testing)
+- [Automated testing](#automated-testing)
 ## Hardware management suite and sx_core driver interaction
 
 sx_core driver now implements generation of ADD/REMOVE udev event on sx_core_init_one_pci/sx_core_remove_one_pci.<br>
