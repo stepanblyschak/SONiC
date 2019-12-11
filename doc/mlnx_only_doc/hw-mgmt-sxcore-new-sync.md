@@ -54,7 +54,7 @@ admin@sonic:~$ sudo dmesg | grep 'reset\|mlxsw_minimal\|on sxcore'
 
 **NOTE**:
 The nature of udev event is asynchronous - mlxsw_mininal driver initialization is done seperately from syncd start script process.
-An ADD event is used only to start mlxsw_minimal driver, but it doesn't mean sxcore will wait for mlxsw_minimal initialization to finish. Because of that there is a posibility for a race condition when ```systemctl restart swss``` happends while mlxsw_minimal driver initializes.
+An ADD event is used only to start mlxsw_minimal driver, but it doesn't mean sxcore will wait for mlxsw_minimal initialization to finish. Because of that there is a posibility for a race condition when ```systemctl restart swss``` happens while mlxsw_minimal driver initializes.
 
 The more time mlxsw_minimal driver takes to initialize the more chance for race condition to happen in sequential swss restarts. With current timings on SPC1 - mlxsw_minimal takes ~2 sec to read and finish SFP device creation. For SPC2 without I2C bus overclocking it is around ~15 sec. In case it takes time which is long enough in order to execute another ```systemctl restart swss``` ASIC reset might happen while mlxsw_minimal accesses FW.
 Even though ```sxdkernel stop``` will send REMOVE udev event - it doesn't mean hw-mgmt will cancel mlxsw_minimal driver in time before reset happens.
