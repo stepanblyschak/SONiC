@@ -12,6 +12,7 @@
   - [Reload](#reload)
 - [Mannual testing](#mannual-testing)
 - [Automated testing](#automated-testing)
+- [Links](#links)
 
 
 # Hardware management suite and sx_core driver interaction
@@ -216,4 +217,9 @@ Verification
 1) Run T0/T1-LAG regression
 2) Run platform tests
 
+# Links
 
+1. https://github.com/Mellanox/Switch-SDK-drivers/blob/sx_sdk_4_3_2300_4.3.2302/drivers/net/mlx_sx/sx_core_main.c
+2. https://github.com/Mellanox/hw-mgmt/blob/V.2.0.0191/recipes-kernel/linux/linux-4.9/0029-mlxsw-minimal-Provide-optimization-for-I2C-bus-acces.patch
+3. https://github.com/Mellanox/hw-mgmt/releases/tag/V.7.0000.2300
+4. https://github.com/Mellanox/hw-mgmt/releases/tag/V.2.0.0191
