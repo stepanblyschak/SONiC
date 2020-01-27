@@ -419,7 +419,7 @@ admin@sonic:~$ show wjh raw L3
 Serialized Redis channel message:
 ```
 {
-    "timestamp": "1579715858.1579715858",
+    "timestamp": 1579715858.1579715858,
     "src_port": "Ethernet24",
     "src_mac": "7C:FE:90:6F:39:BB",
     "dst_mac": "00:00:00:00:00:02",
@@ -452,8 +452,8 @@ admin@sonic:~$ show wjh aggregated buffer
 Serialized Redis channel message:
 ```
 {
-    "first_timestamp": "1579715858.1579715858",
-    "last_timestamp": "1579715859.1579715858",
+    "first_timestamp": 1579715858.1579715858,
+    "last_timestamp": 1579715859.1579715858,
     "eth_type": "IPv4",
     "src_ip_port": "1.1.1.1:171",
     "dest_ip_port": "111.0.0.1:172",
