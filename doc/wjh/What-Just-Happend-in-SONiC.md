@@ -285,7 +285,7 @@ Debug counters in SAI and WJH are mutually exclusive. WJH works directly through
 
 There are going to be two checks:
 
-1. Upon WJH container start in the start script, check for debug counter entries in DB **DEBUG_COUNTER** table.<br>If found - log the error, abort the operation. Service will not be attempted to be restarted by systemd [S: Check systemd man].
+1. Upon WJH container start in the start script, check for debug counter entries in DB **DEBUG_COUNTER** table.<br>If found - log the error, abort the operation. Service will not be attempted to be restarted by systemd.
 2. In WJH enable CLI, log error and print the message to the user:<br> "Enabling WJH with debug counters is not supported. To enable WJH disable debug counters first".
 
 To support WJH enable/disable at runtime, debug counters configuration producers have to be notified that debug counters became unavailable. The following option to implement this may be considered:
@@ -563,7 +563,7 @@ Channel polling will be performed in Select loop by wjhd; timerfd based Selectab
 
 WJH lib returns logical port ID while we need to provide SONiC port name/alias. Since there is no SONiC+ infrastructure ready yet, the following way of mapping logcal port ID to SONiC port name is suggested: <p>
 
-  On initialization time, WJH agent will read **COUNTERS_PORT_NAME_MAP** from COUNTERS DB. **COUNTERS_PORT_NAME_MAP** has a mapping from SONiC port name to SAI redis virtual OID. Given the virtual SAI redis OID we need to map it to real SAI OID, which can be done using ASIC DB's **VIDTORID** table. By using the Mellanox SAI port OID we can extract SDK logical port ID. To avoid hardcoding SDK logical ID extraction math, wjh agent can link to Mellanox SAI library in order to use *mlnx_object_to_log_port* function. <p>
+  On initialization time, WJH agent will read **COUNTERS_PORT_NAME_MAP** from COUNTERS DB. **COUNTERS_PORT_NAME_MAP** has a mapping from SONiC port name to SAI redis virtual OID. Given the virtual SAI redis OID we need to map it to real SAI OID, which can be done using ASIC DB's **VIDTORID** table. By using the Mellanox SAI port OID we can extract SDK logical port ID. To avoid hardcoding SDK logical ID extraction math, wjh agent can link to Mellanox SAI library and attach to the switch (SAI_SWITCH_ATTR_INIT_SWITCH=false) in order to use *mlnx_object_to_log_port* function. <p>
   Future port breakout is not considered here. It is assumed that in case of port breakout *portsyncd* will generate some kind of event when host interfaces for new ports are created, old ports removed, so WJH agent can subscribe for such kind of events to recreate internal map.
 
   SDK logical port ID from SONiC port name convertion scheme:
@@ -581,6 +581,7 @@ WJH lib returns logical port ID while we need to provide SONiC port name/alias. 
 
   Future port breakout is not considered here. It is assumed that in case of port breakout *portsyncd* will generate some kind of event when host interfaces for new ports are created, old ports moved, so WJH agent can subscribe for such kind of events to recreate internal map.
 
+Option to use WJH_INGRESS_INFO_TYPE_IF_INDEX is more prefered here since it is simpler and we do not introduce SAI dependency here.
  
 ### SDK logical LAG ID to SONiC LAG name mapping
  
