@@ -32,10 +32,14 @@
   - [WJH provided data](#wjh-provided-data)
   - [Raw Channel](#raw-channel)
   - [Aggregated channel](#aggregated-channel)
-  - [Local debug. CLI considerations](#local-debug-cli-considerations)
-    - [WJH channel and Redis channel](#wjh-channel-and-redis-channel)
-    - [Raw Channel](#raw-channel-1)
-    - [Aggregated Channel](#aggregated-channel)
+  - [Local debug. CLI and WJH daemon considerations](#local-debug-cli-and-wjh-daemon-considerations)
+    - [Debug mode without streaming](#debug-mode-without-streaming)
+      - [Raw](#raw)
+      - [Aggregated](#aggregated)
+    - [Debug mode with streaming](#debug-mode-with-streaming)
+      - [WJH channel and Redis channel](#wjh-channel-and-redis-channel)
+      - [Raw Channel](#raw-channel-1)
+      - [Aggregated Channel](#aggregated-channel)
   - [WJH daemon](#wjh-daemon)
     - [Push vs Pull](#push-vs-pull)
   - [Mapping SDK IDs to SONiC IDs/object names](#mapping-sdk-ids-to-sonic-idsobject-names)
@@ -44,13 +48,13 @@
     - [SDK ACL rule ID to SONiC ACL rule name mapping](#sdk-acl-rule-id-to-sonic-acl-rule-name-mapping)
     - [Classes](#classes)
   - [WJH daemon packet parsing library](#wjh-daemon-packet-parsing-library)
+  - [WJH debug dump](#wjh-debug-dump)
   - [Flows](#flows)
     - [wjhd init flow](#wjhd-init-flow)
     - [wjhd channel create and set flow](#wjhd-channel-create-and-set-flow)
     - [wjhd channel remove flow](#wjhd-channel-remove-flow)
     - [wjhd deinit flow](#wjhd-deinit-flow)
     - [wjhd CLI flow](#wjhd-cli-flow)
-    - [wjhd stream to cli decision](#wjhd-stream-to-cli-decision)
   - [CLI](#cli)
     - [Show CLI:](#show-cli)
     - [Show WJH feature status](#show-wjh-feature-status)
@@ -61,6 +65,7 @@
     - [System level](#system-level)
     - [Service level](#service-level)
   - [Fast Boot Support](#fast-boot-support)
+  - [System performance](#system-performance)
   - [Unit testing](#unit-testing)
     - [CLI](#cli-1)
       - [Case 1](#case-1)
@@ -81,7 +86,6 @@
 * [Channel remove flow](#wjhd-channel-remove-flow)
 * [Deinit flow](#wjhd-deinit-flow)
 * [CLI flow](#wjhd-cli-flow)
-* [Stream to cli decision](#wjhd-stream-to-cli-decision)
 
 # Revision
 | Rev | Date     | Author          | Change Description        |
@@ -193,6 +197,7 @@ sudo systemctl disable wjh
 key          = WJH|global
 nice_level   = integer ; wjh daemon process "nice" value
 pci_bandwith = percentage ; percent of PCI bandwidth used by WJH, range [0-100]
+mode         = string ; either "debug" or "streaming"
 ```
 
 Default configuration:
@@ -202,7 +207,8 @@ Default configuration:
   "WJH": {
     "global": {
       "nice_level": "1",
-      "pci_bandwidth": "50"
+      "pci_bandwidth": "50",
+      "mode": "debug"
     }
   }
 }
@@ -219,7 +225,7 @@ Porcesses inside WJH will have their own defaults, which will be the same. One n
 ; Describes WJH channel configuration
 key                = WJH_CHANNEL|<channel name>
 type               = string ; raw|aggregated
-polling_interval   = uinteger;
+polling_interval   = uinteger; polling interval for streaming
 drop_category_list = string; comma seperated list of drop groups
 ```
 
@@ -268,7 +274,7 @@ RestartSec=30
 
 ## WJH reasons and severity configuration file
 
-WJH requires a CSV formatted file on initialization. The file columns are:
+WJH requires a CSV/XML formatted file on initialization. The file columns are:
 ```
 ID              : drop reason ID;
 REASON          : human readable message describing the reason;
@@ -276,7 +282,7 @@ SEVERITY        : severity of the drop;
 PROPOSED ACTION : proposed action message (if there is);
 ```
 
-SONiC has to provide a default CSV. Default CSV will be built into image and put under /etc/sonic/wjh/.
+SONiC has to provide a default CSV/XML. Default CSV/XML will be built into image and put under /etc/sonic/wjh/.
 The path /etc/sonic is mapped to every container in RO mode, so WJH daemon will be able read it.
 
 ## WJH and debug counters
@@ -290,7 +296,7 @@ There are going to be two checks:
 
 To support WJH enable/disable at runtime, debug counters configuration producers have to be notified that debug counters became unavailable. The following option to implement this may be considered:
 
-3. Once started, WJH has to reset capability table, speicifically it has to cleanup **DEBUG_COUNTER_CAPABILITIES** table populated by orchagent, in order for **DEBUG_COUNTER** table producers to know that debug counters became unavailable. On teardown, WJH has to restore **DEBUG_COUNTER_CAPABILITIES** table to the original state. Prefered to not put this logic in daemon part but in the service start script by saving table into file in container. Stop will restore the content of table. On unexpected restart the file will persist since the docker container is already created till user explicitelly removes the container.
+3. Once started, WJH has to reset capability table, speicifically it has to cleanup **DEBUG_COUNTER_CAPABILITIES** table populated by orchagent, in order for **DEBUG_COUNTER** table producers to know that debug counters became unavailable. On teardown, WJH has to restore **DEBUG_COUNTER_CAPABILITIES** table to the original state. Prefered to not put this logic in daemon part but in the service start script by saving table into json file in container. Stop will restore the content of table. On unexpected restart the file will persist since the docker container is already created till user explicitelly removes the container.
 
 
 ## WJH agent design
@@ -369,7 +375,87 @@ Priority[10001];KEY[SIP: 1.1.1.1/255.255.255.255];ACTION[COUNTER: COUNTER_ID = 9
 While such description is not aligned with SONiC as it comes from SDK level it may be still usefull for user.
 In the future, we can use ACL rule ID and map it to SONiC rule name, which is "RULE_1" from table "DATAACL" in this case. However, such mapping requires SONiC+ infrastructure.
 
-## Local debug. CLI considerations
+## Local debug. CLI and WJH daemon considerations
+
+### Debug mode without streaming
+
+Following mode design stands on assumptions:
+  - no periodic polling/no streaming
+  - one debug user
+
+User will have to switch to debug mode:
+
+```
+admin@sonic:~$ sudo config wjh debug enable
+```
+
+#### Raw
+
+Whenever user requests raw packets via CLI, WJH daemon will pull packets from WJH library. No periodic polling is done, since streaming is disabled.
+
+```
+admin@sonic:~$ show wjh raw L3
+#      Timestamp                sPort       dPort    VLAN    sMAC               dMAC               EthType    Src IP:Port    Dst IP:Port    IP Proto    Drop Group    Severity    Drop reason - recomended action
+----   -----------------------  ----------  -------  ------  -----------------  -----------------  ---------  -------------  -------------  ----------  ------------  ----------  ---------------------------------
+1      2019/07/18 11:06:31.277  Ethernet24  N/A      N/A     7C:FE:90:6F:39:BB  00:00:00:00:00:02  IPv4       1.1.1.1:171    127.0.0.1:172  TCP         L3            Critical    Destination IP is loopback
+```
+
+CLI will have an option to work in "follow" mode, which will request the daemon to pull packets continuously.
+
+```
+admin@sonic:~$ show wjh raw L3 --follow
+#      Timestamp                sPort       dPort    VLAN    sMAC               dMAC               EthType    Src IP:Port    Dst IP:Port    IP Proto    Drop Group    Severity    Drop reason - recomended action
+----   -----------------------  ----------  -------  ------  -----------------  -----------------  ---------  -------------  -------------  ----------  ------------  ----------  ---------------------------------
+1      2019/07/18 11:06:31.277  Ethernet24  N/A      N/A     7C:FE:90:6F:39:BB  00:00:00:00:00:02  IPv4       1.1.1.1:171    127.0.0.1:172  TCP         L3            Critical    Destination IP is loopback
+2 ...
+3 ...
+```
+
+Communication implementation may use Producer/ConsumerTable with operations "get" and "getresponse". e.g.:
+
+CLI request:  ```op: "get", fvs: [("raw", "L3")]```
+WJHd response:  ```op: "getresponse", fvs: [(<serialized packet data>, <timestamp>), ...]```
+
+Serialized packet data:
+
+```json
+{
+    "src_port": "Ethernet24",
+    "src_mac": "7C:FE:90:6F:39:BB",
+    "dst_mac": "00:00:00:00:00:02",
+    "eth_type": "IPv4",
+    "src_ip_port": "1.1.1.1:171",
+    "dest_ip_port": "127.0.0.1:172",
+    "ip_proto": "TCP",
+    "drop_group": "L3",
+    "severity": "Critical",
+    "reason": "Destination IP is loopback"
+}
+```
+
+
+#### Aggregated
+
+Whenever user requests aggregated counters via CLI, WJH daemon will pull counters from WJH library. No periodic polling is done, since streaming is disabled.
+
+```
+admin@sonic:~$ show wjh aggregated l3 buffer
+Drops within period: 2019/07/18 11:06:31 - 2019/07/18 11:06:36
+#      sMac          dMac           Src IP:Port    Dst IP:Port    IP Proto    Drop Group    Count    Severity    Drop reason - recomended action
+----   ------------- -------------  -------------  -------------  ----------  ------------  ------   ----------  ---------------------------------
+1      N/A           N/A            1.1.1.1:171    127.0.0.1:172  TCP         L3            532      Critical    Dest IP is loopback
+2      N/A           N/A            N/A            N/A            N/A         Buffer        1542     Critical    WRED
+```
+*NOTE*: A window size displayed by the command will be calculated based on ```min(first_timestamps)``` and ```max(last_timestamps)```.
+
+
+
+Communication implementation may use Producer/ConsumerTable with operations "get" and "getresponse". e.g.:
+
+CLI request:  ```op: "get", fvs: [("aggregate", "buffer")]```
+WJHd response:  ```op: "getresponse", fvs: [(<serialized packet data>, <timestamp + counter>), ...]```
+
+### Debug mode with streaming
 
 In this mode, WJH agent will stream the drop data to CLI. Data won't be stored anywhere, CLI will consume them imidiatelly.<br>
 For debugging purpose, user can redirect the output to a file, e.g:<p>
@@ -395,7 +481,7 @@ There are following requirements to debug mode:
 * WJH streaming to collector does not stop when streaming to CLI
 * Two or more users are able to debug at the same time
 
-### WJH channel and Redis channel
+#### WJH channel and Redis channel
 
 Right now it is considered to have a single WJH dedicated Redis channel.
 <p> [**Q**] Consider having per channel type ? per WJH channel ? per drop reason group ?
@@ -404,7 +490,7 @@ Right now it is considered to have a single WJH dedicated Redis channel.
 CLI has to have a way to tell WJH daemon to start streaming data to the channel. The main WJH daemon thread is subscribed to WJH_REQUEST_CHANNEL channel listents for CLI requests.
 
 
-### Raw Channel
+#### Raw Channel
 
 Raw Channel handling is straightforward. On every received packet via callback a message to Redis channel is sent which is consumed by CLI imidiatelly and output is printed on the screen. The CLI will work in "follow" mode, continuosly printing every received message via channel. User can terminate the CLI by sending SIGTERM, SIGINT, etc.
 
@@ -433,9 +519,9 @@ Serialized Redis channel message:
 }
 ```
 
-### Aggregated Channel
+#### Aggregated Channel
 
-Since WJH library API works in READ&CLEAR mode, every event in aggregated channel generated by WJH will reset the counter
+Since WJH library API works in READ&CLEAR mode, every event in aggregated channel generated by WJH will reset the counter.
 
 ```
 admin@sonic:~$ show wjh aggregated buffer
@@ -642,6 +728,24 @@ CLI requires source, destination MAC, Ethernet type, source, destination IP:port
 
 * https://github.com/mfontanini/libtins
 
+## WJH debug dump
+
+Techsupport dump should include the WJH debug dump data.
+
+As WJH will be a SONiC out of tree addon in the future, the mechanism to generate WJH dump has to be generalized:
+
+```
+for addon in sonic_addons:
+  use a common addon interface to generate dump
+  put dump data into archive
+```
+
+This, however, is out of scope for this document, so *generate_dump.sh* script has to be updated with a condition - if it is a mellanox platform and wjh feature is enabled then request the WJH daemon to generate WJH dump and put the file into dump archive.
+
+A small utility program inside a docker image will do the request - *wjh_generate_dump* by using ProducerTable with "get" operation and wait for response "getresponse" when wjh daemon finished dump generation.
+
+*NOTE*: ProducerTable, ConsumerTable unlike their state alternatives do not put any data in DB on "get"/"getresponse".
+
 ## Flows
 
 ### wjhd init flow
@@ -663,10 +767,6 @@ CLI requires source, destination MAC, Ethernet type, source, destination IP:port
 ### wjhd CLI flow
 
 ![wjhd cli_flow](/doc/wjh/wjhd_user_flow.svg)
-
-### wjhd stream to CLI decision
-
-![wjhd cli](/doc/wjh/wjhd_cli.svg)
 
 
 ## CLI
