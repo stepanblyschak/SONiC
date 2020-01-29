@@ -856,7 +856,13 @@ A small utility program inside a docker image will do the request - *wjh_generat
 
 ![wjhd deinit](/doc/wjh/wjhd_deinit.svg)
 
-### wjhd CLI flow
+
+### wjhd CLI flow, approach 1
+
+![wjhd cli_flow](/doc/wjh/wjhd_user_flow_ap1.svg)
+
+
+### wjhd CLI flow, approach 2
 
 ![wjhd cli_flow](/doc/wjh/wjhd_user_flow.svg)
 
