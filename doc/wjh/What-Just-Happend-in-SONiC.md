@@ -40,7 +40,7 @@
       - [Aggregated](#aggregated)
       - [Serialized aggregated WJH message](#serialized-aggregated-wjh-message)
       - [CLI and daemon communication](#cli-and-daemon-communication)
-    - [Debug mode with streaming](#debug-mode-with-streaming)
+    - [Approach 2. Debug mode with streaming](#approach-2-debug-mode-with-streaming)
       - [WJH channel and Redis channel](#wjh-channel-and-redis-channel)
       - [Raw Channel](#raw-channel-1)
       - [Aggregated Channel](#aggregated-channel)
@@ -58,7 +58,8 @@
     - [wjhd channel create and set flow](#wjhd-channel-create-and-set-flow)
     - [wjhd channel remove flow](#wjhd-channel-remove-flow)
     - [wjhd deinit flow](#wjhd-deinit-flow)
-    - [wjhd CLI flow](#wjhd-cli-flow)
+    - [wjhd CLI flow, approach 1](#wjhd-cli-flow-approach-1)
+    - [wjhd CLI flow, approach 2](#wjhd-cli-flow-approach-2)
   - [CLI](#cli)
     - [Show CLI:](#show-cli)
     - [Show WJH feature status](#show-wjh-feature-status)
@@ -89,12 +90,14 @@
 * [Channel create and set flow](#wjhd-channel-create-and-set-flow)
 * [Channel remove flow](#wjhd-channel-remove-flow)
 * [Deinit flow](#wjhd-deinit-flow)
-* [CLI flow](#wjhd-cli-flow)
+* [CLI flow 1](#wjhd-cli-flow-approach-1)
+* [CLI flow 2](#wjhd-cli-flow-approach-2)
 
 # Revision
 | Rev | Date     | Author          | Change Description        |
 |:---:|:--------:|:---------------:|---------------------------|
 | 0.1 | 01/20    | Stepan Blyschak | Initial version           |
+| 0.2 | 01/28    | Stepan Blyschak | Debug mode approaches     |
 
 # About this Manual
 This document provides an overview of the implementation and integration of What Just Happened feature in SONiC.
@@ -547,7 +550,7 @@ CLI request:  ```op: "get", fvs: [("type", "raw"), ("drop_groups", "L3,Tunnel")]
 <br>
 WJHd response:  ```op: "getresponse", fvs: [("error", ""), ("data", "<serialized packet data>")]```
 
-### Debug mode with streaming
+### Approach 2. Debug mode with streaming
 
 In this mode, WJH agent will stream the drop data to CLI. Data won't be stored anywhere, CLI will consume them imidiatelly.<br>
 For debugging purpose, user can redirect the output to a file, e.g:<p>
