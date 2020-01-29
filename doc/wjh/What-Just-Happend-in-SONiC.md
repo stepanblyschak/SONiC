@@ -859,6 +859,8 @@ A small utility program inside a docker image will do the request - *wjh_generat
 
 ![wjhd deinit](/doc/wjh/wjhd_deinit.svg)
 
+*NOTE*: It is good to implement *deactive_cb*, so that if other docker takes control of WJH library (like neo, or customer specific container), the wjh will shutdown and print a log message that another application took control.
+
 
 ### wjhd CLI flow, approach 1
 
