@@ -94,7 +94,7 @@ This document describes the high level design of the What Just Happened feature 
 
 # 1. Overview
 
-What Just Happened feature provides the user a way to debug a network problem by providing the as much information information about dropped packets due to L1, L2, L3, ACL or buffer related drop reasons. 
+What Just Happened feature gives user a way to debug a network problem by providing as much information as possible about dropped packets due to L1, L2, L3, ACL or buffer related drop reasons. 
 
 # 2 Requirements Overview
 
@@ -153,8 +153,6 @@ CONTAINER ID        IMAGE                                COMMAND                
 * *debugfs* mounted inside container (requires RW access to */sys/kernel/debug/*)
 * */var/log/mellanox/* mounted inside container (used for pcap files)
 * */var/run/wjh/* mounted inside container (used for Unix domain socket)
-
-*NOTE*: In order to improve build speed and reduce SONiC image size an intermediate SDK docker image can be created and *syncd*, *pmon* and *wjh* docker may built on top of SDK intermediate docker image.
 
 ## 3.3 WJH service in SONiC
 
