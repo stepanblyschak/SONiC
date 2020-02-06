@@ -21,42 +21,43 @@
 - [3 Modules design](#3-modules-design)
   - [3.1 WJH build and runtime dependencies](#31-wjh-build-and-runtime-dependencies)
   - [3.2 WJH docker container in SONiC](#32-wjh-docker-container-in-sonic)
-  - [3.3 WJH service in SONiC](#33-wjh-service-in-sonic)
-  - [3.4 WJH feature table](#34-wjh-feature-table)
-  - [3.5 WJH reasons and severity configuration file](#35-wjh-reasons-and-severity-configuration-file)
-  - [3.6 WJH and debug counters](#36-wjh-and-debug-counters)
-  - [3.7 Config DB](#37-config-db)
-    - [3.7.1 WJH table schema](#371-wjh-table-schema)
-    - [3.7.2 WJH table defaults](#372-wjh-table-defaults)
-  - [3.8 WJH default configuration for debug mode](#38-wjh-default-configuration-for-debug-mode)
-  - [3.9 WJH provided data](#39-wjh-provided-data)
-    - [3.9.1 Raw Channel](#391-raw-channel)
-    - [3.9.2 Aggregated channel](#392-aggregated-channel)
-  - [3.10 Mapping SDK IDs to SONiC IDs/object names](#310-mapping-sdk-ids-to-sonic-idsobject-names)
-    - [3.10.1 SDK logical port ID/netdev IF_INDEX to SONiC port name mapping](#3101-sdk-logical-port-idnetdev-if_index-to-sonic-port-name-mapping)
-    - [3.10.2 SDK logical LAG ID to SONiC LAG name mapping](#3102-sdk-logical-lag-id-to-sonic-lag-name-mapping)
-    - [3.10.3 SDK ACL rule ID to SONiC ACL rule name mapping](#3103-sdk-acl-rule-id-to-sonic-acl-rule-name-mapping)
-  - [3.11 CLI](#311-cli)
-    - [3.11.1 Enabled/disable WJH feature](#3111-enableddisable-wjh-feature)
-    - [3.11.2 Config WJH global parameters](#3112-config-wjh-global-parameters)
-    - [3.11.3 Raw](#3113-raw)
-    - [3.11.4 Aggregated](#3114-aggregated)
-  - [3.12 WJH daemon](#312-wjh-daemon)
-    - [3.12.1 Push vs Pull](#3121-push-vs-pull)
-    - [3.12.2 WJH daemon packet parsing library](#3122-wjh-daemon-packet-parsing-library)
-    - [3.12.3 WJH communication with CLI](#3123-wjh-communication-with-cli)
-    - [3.13 WJH debug dump](#313-wjh-debug-dump)
+  - [3.3 WJH in SONiC overview](#33-wjh-in-sonic-overview)
+  - [3.4 WJH service in SONiC](#34-wjh-service-in-sonic)
+  - [3.5 WJH feature table](#35-wjh-feature-table)
+  - [3.6 WJH reasons and severity configuration file](#36-wjh-reasons-and-severity-configuration-file)
+  - [3.7 WJH and debug counters](#37-wjh-and-debug-counters)
+  - [3.8 Config DB](#38-config-db)
+    - [3.8.1 WJH table schema](#381-wjh-table-schema)
+    - [3.8.2 WJH table defaults](#382-wjh-table-defaults)
+  - [3.9 WJH default configuration for debug mode](#39-wjh-default-configuration-for-debug-mode)
+  - [3.10 WJH provided data](#310-wjh-provided-data)
+    - [3.10.1 Raw Channel](#3101-raw-channel)
+    - [3.10.2 Aggregated channel](#3102-aggregated-channel)
+  - [3.11 Mapping SDK IDs to SONiC IDs/object names](#311-mapping-sdk-ids-to-sonic-idsobject-names)
+    - [3.11.1 SDK logical port ID/netdev IF_INDEX to SONiC port name mapping](#3111-sdk-logical-port-idnetdev-if_index-to-sonic-port-name-mapping)
+    - [3.11.2 SDK logical LAG ID to SONiC LAG name mapping](#3112-sdk-logical-lag-id-to-sonic-lag-name-mapping)
+    - [3.11.3 SDK ACL rule ID to SONiC ACL rule name mapping](#3113-sdk-acl-rule-id-to-sonic-acl-rule-name-mapping)
+  - [3.12 CLI](#312-cli)
+    - [3.12.1 Enabled/disable WJH feature](#3121-enableddisable-wjh-feature)
+    - [3.12.2 Config WJH global parameters](#3122-config-wjh-global-parameters)
+    - [3.12.3 Raw](#3123-raw)
+    - [3.12.4 Aggregated](#3124-aggregated)
+  - [3.13 WJH daemon](#313-wjh-daemon)
+    - [3.13.1 Push vs Pull](#3131-push-vs-pull)
+    - [3.13.2 WJH daemon packet parsing library](#3132-wjh-daemon-packet-parsing-library)
+    - [3.13.3 WJH communication with CLI](#3133-wjh-communication-with-cli)
+    - [3.14 WJH debug dump](#314-wjh-debug-dump)
 - [4 Flows](#4-flows)
   - [4.1 wjhd init flow](#41-wjhd-init-flow)
   - [4.2 wjhd channel create and set flow](#42-wjhd-channel-create-and-set-flow)
   - [4.3 wjhd channel remove flow](#43-wjhd-channel-remove-flow)
   - [4.4 wjhd deinit flow](#44-wjhd-deinit-flow)
+  - [4.5 wjhd user flow](#45-wjhd-user-flow)
 - [5 Warm Boot Support](#5-warm-boot-support)
   - [5.1 System level](#51-system-level)
   - [5.2 Service level](#52-service-level)
 - [6 Fast Boot Support](#6-fast-boot-support)
-- [7 Unit testing](#7-unit-testing)
-- [8 Open Questions](#8-open-questions)
+- [7 Open Questions](#7-open-questions)
 
 # List of Tables
 * [Table 1: Abbreviations](#definitionsabbreviation)
@@ -64,10 +65,12 @@
 * [Table 3: Aggregated Channel Data](#aggregated-channel)
 
 # List of Figures
+* [WJH in SONiC](#33-wjh-in-sonic-overview)
 * [Init flow](#41-wjhd-init-flow)
 * [Channel create and set flow](#42-wjhd-channel-create-and-set-flow)
 * [Channel remove flow](#43-wjhd-channel-remove-flow)
 * [Deinit flow](#44-wjhd-deinit-flow)
+* [User flow](#45-wjhd-user-flow)
 
 # Revision
 | Rev | Date     | Author          | Change Description                 |
@@ -148,23 +151,32 @@ CONTAINER ID        IMAGE                                COMMAND                
 2b199b2309f9        docker-wjh:latest                    "/usr/bin/supervisord"   17 hours ago        Up 11 hours                             what-just-happened
 ```
 
-* SDK Unix socket needs to be mapped to container at runtime
-* SDK /dev/shm needs to be mapped to container at runtime
+* SDK Unix socket needs to be mapped to container
+* /dev/shm needs to be mapped to container
 * *debugfs* mounted inside container (requires RW access to */sys/kernel/debug/*)
 * */var/log/mellanox/* mounted inside container (used for pcap files)
 * */var/run/wjh/* mounted inside container (used for Unix domain socket)
 
-## 3.3 WJH service in SONiC
+*debugfs* is used by WJH library to attach a program to a tracepoint in kernel.
+
+*NOTE*: WJH container has to avoid using ```--privilaged``` and ```--net=host``` because of security considerations. Instead create a docker container with limited capabilities.
+
+## 3.3 WJH in SONiC overview 
+
+![wjh in sonic](/doc/wjh/wjh_overview.svg)
+
+## 3.4 WJH service in SONiC
 
 A corresponding service file has to be created to manage the lifetime and dependencies of WJH docker container.
 
 WjH service, as an ASIC-dependent service, should have a hard requirement for syncd service, so it will be started, restarted, stopped when syncd service is.
+However, for few reasons there is also a dependency on swss service which will be descirbed later.
 
 The following systemd unit configurations and dependencies will be set:
 
 ```
-Requiers=database.service syncd.service
-After=database.service syncd.service
+Requiers=database.service swss.service syncd.service
+After=database.service syncd.service swss.service
 Before=ntpconfig.service
 StartLimitIntervalSec=1200
 StartLimitBurst=3
@@ -179,7 +191,7 @@ RestartSec=30
 
 Thus, the service is configured to be restarted in case of a failure. If the service was autorestarted 3 times within 20 minutes the service will fail.
 
-## 3.4 WJH feature table
+## 3.5 WJH feature table
 
 Community [introduced](https://github.com/Azure/SONiC/blob/master/doc/Optional-Feature-Control.md) a way to enable/disable optional features at runtime and provided a seperate **FEATURE** table in CONFIG DB.
 
@@ -211,7 +223,7 @@ sudo systemctl disable what-just-happened
 
 By default WJH feature will be disabled; this configuration will be put in */etc/sonic/init_cfg.json* at build time
 
-## 3.5 WJH reasons and severity configuration file
+## 3.6 WJH reasons and severity configuration file
 
 WJH requires a XML formatted file on initialization. The file columns are:
 ```
@@ -226,7 +238,7 @@ The path /etc/sonic is mapped to every container in RO mode, so WJH daemon will 
 
 By default, in case this file does not exists, WJH library will be initialized to use default XML provided by WJH library.
 
-## 3.6 WJH and debug counters
+## 3.7 WJH and debug counters
 
 Debug counters in SAI and WJH are mutually exclusive. WJH works directly through SDK, so SAI cannot know when it’s enabled/disabled.
 
@@ -240,9 +252,9 @@ There are going to be two checks:
    On teardown, WJH has to restore **DEBUG_COUNTER_CAPABILITIES** table to the original state.
    Prefered to not put this logic in daemon part but in the service start script by saving table into json file under either */tmp/* or */var/run/wjh/*. ```ExecStopPost=``` action will ensure the content of the table will be restored even on unexpected failures.
 
-## 3.7 Config DB
+## 3.8 Config DB
 
-### 3.7.1 WJH table schema
+### 3.8.1 WJH table schema
 
 ```
 ; Describes global configuration for WJH
@@ -252,7 +264,7 @@ pci_bandwith = percentage ; percent of PCI bandwidth used by WJH, range [0-100]
 mode         = debug ; only debug mode will be availabe right now
 ```
 
-### 3.7.2 WJH table defaults
+### 3.8.2 WJH table defaults
 
 ```json
 {
@@ -269,7 +281,7 @@ mode         = debug ; only debug mode will be availabe right now
 Default configuration is stored in */etc/sonic/init_cfg.json*. It's generation can be extended to generate WJH table for Mellanox build.
 Porcesses inside WJH will have their own defaults, which will be the same.
 
-## 3.8 WJH default configuration for debug mode
+## 3.9 WJH default configuration for debug mode
 
 At phase 1 the following default channel configuration will be set:
 
@@ -294,9 +306,9 @@ We'll use WJH default ring buffer and aggregate buffer size which is 1024.
 
 Buffer group is only supported on SPC2 for now. Support for SPC1 will require recirculation port.
 
-## 3.9 WJH provided data
+## 3.10 WJH provided data
 
-### 3.9.1 Raw Channel
+### 3.10.1 Raw Channel
 
 | Data               | Buffer   | L1       | L2       | Router   | Tunnel   | ACL      |
 |:------------------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|
@@ -317,7 +329,7 @@ Buffer group is only supported on SPC2 for now. Support for SPC1 will require re
 
 - \* SPC2 only
 
-### 3.9.2 Aggregated channel
+### 3.10.2 Aggregated channel
 
 | Data               | Buffer   | L1       | L2       | Router   | Tunnel   | ACL      |
 |:------------------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|
@@ -340,9 +352,9 @@ Buffer group is only supported on SPC2 for now. Support for SPC1 will require re
 
 - \* SPC2 only
 
-## 3.10 Mapping SDK IDs to SONiC IDs/object names
+## 3.11 Mapping SDK IDs to SONiC IDs/object names
 
-### 3.10.1 SDK logical port ID/netdev IF_INDEX to SONiC port name mapping
+### 3.11.1 SDK logical port ID/netdev IF_INDEX to SONiC port name mapping
 
 For ports WJH library has to options:
 - WJH_INGRESS_INFO_TYPE_LOGPORT
@@ -355,12 +367,20 @@ Using first one, requires WJH daemon to generate SAI OID based on SDK logical po
 
 
 For SONiC use case, since SONiC creates host interface for every physical port, it is preferable to use WJH_INGRESS_INFO_TYPE_IF_INDEX since it is easier to map it to SONiC port name which is the same as host interface net device name.
+
+This will require docker container to have host networking stack. In order to avoid such requirement ```portsyncd``` can set ```if_index``` to ```PORT_TABLE``` in STATE DB.
+
+E.g.:
+```
+admin@sonic:~$ sonic-db-cli STATE_DB HGETALL 'PORT_TABLE|Ethernet0'
+{'state': 'ok', 'if_index': '42'}
+```
  
-### 3.10.2 SDK logical LAG ID to SONiC LAG name mapping
+### 3.11.2 SDK logical LAG ID to SONiC LAG name mapping
 
 There is no table in DB that will map SONiC LAG name to SAI redis virtual OID. Without SONiC+ infrastructure it may be tricky to map SDK LAG ID to SONiC LAG name, while it is still possible. Since WJH library provides ingress logical port ID and ingress LAG ID in case ingress port is a LAG member it is possible to map it to the LAG uniquely by LAG member port. However, in order to simplify developement the LAG ID data provided by WJH library will be ignored. Besides, it is not worth the required effort, since user can map ingress port to LAG on his own.
 
-### 3.10.3 SDK ACL rule ID to SONiC ACL rule name mapping
+### 3.11.3 SDK ACL rule ID to SONiC ACL rule name mapping
 
 Complex to do such mapping without SONiC+, therefore this data will be ignored for now.
 
@@ -383,7 +403,7 @@ Priority[10001];KEY[SIP: 1.1.1.1/255.255.255.255];ACTION[COUNTER: COUNTER_ID = 9
 While such description is not aligned with SONiC as it comes from SDK level it may be still usefull for user.
 In the future, we can use ACL rule ID and map it to SONiC rule name, which is "RULE_1" from table "DATAACL" in this case. However, such mapping requires SONiC+ infrastructure.
 
-## 3.11 CLI
+## 3.12 CLI
 
 Since user channel polling is read and clear, having two WJH clients, e.g. user that debugs drops and streaming collector, results in a problem when one client can clear the raw infromation or aggregated counters for another one. Thus, first approach that is considered is to disable streaming and debug mode via "mode" configuration knob.
 
@@ -397,7 +417,7 @@ User will have to switch to debug mode if not already in debug mode:
 admin@sonic:~$ sudo config what-just-happened mode debug
 ```
 
-### 3.11.1 Enabled/disable WJH feature
+### 3.12.1 Enabled/disable WJH feature
 
 Already implemented as part of "optional features" feature:
 
@@ -414,11 +434,11 @@ telemetry             enabled
 what-just-happened    enabled
 ```
 
-### 3.11.2 Config WJH global parameters
+### 3.12.2 Config WJH global parameters
 
 Global parameters will be create only.
 
-### 3.11.3 Raw
+### 3.12.3 Raw
 
 - Whenever user requests raw packets via CLI, WJH daemon will pull packets from WJH channel. No periodic polling is done, since streaming is disabled
 - User can optionally pass one or multiple drop reason groups as argument to CLI to filter out drops user is not interested in
@@ -443,7 +463,7 @@ Pcap file generated at /var/log/mellanox/wjh/forwarding_2020_01_31_01_40_02.pcap
 1      2019/07/18 11:06:31.277  Ethernet24  N/A      N/A     7C:FE:90:6F:39:BB  00:00:00:00:00:02  IPv4       1.1.1.1:171    127.0.0.1:172  TCP         L3            Critical    Destination IP is loopback
 ```
 
-### 3.11.4 Aggregated
+### 3.12.4 Aggregated
 
 - Whenever user requests aggregated counters via CLI, WJH daemon will pull counters from WJH library
 - User can optionally pass one or multiple drop reason groups as argument to CLI to filter out drops user is not interested in
@@ -477,9 +497,9 @@ Sample Window : 2019/07/18 11:06:31 - 2019/07/18 11:06:36
 
 ```
 
-## 3.12 WJH daemon
+## 3.13 WJH daemon
 
-### 3.12.1 Push vs Pull
+### 3.13.1 Push vs Pull
 
 In push mode, the WJH library periodically queries the dropped packets or statistics and deliver them via user callbacks.
 In pull mode, the WJH library stops the periodical query. The dropped packets or statistics can be delivered via user callbacks
@@ -488,13 +508,13 @@ context/thread of the caller of *wjh_user_channel_pull*.
 
 Pull mode is prefered here because no syncronization with WJH library thread will be required.
 
-### 3.12.2 WJH daemon packet parsing library
+### 3.13.2 WJH daemon packet parsing library
 
 CLI requires source, destination MAC, Ethernet type, source, destination IP:port and IP protocol on raw channel. A packet parsing library can be used:
 
 * https://github.com/mfontanini/libtins
 
-### 3.12.3 WJH communication with CLI
+### 3.13.3 WJH communication with CLI
 
 In order to not produce additional load in Redis DB or bringing another Redis instance specifically for WJH another IPC mechanism will be used.
 A suggested alternative is a Unix domain socket. It may be placed under */var/run/wjh/wjh.sock* wich will be mapped to WJH container.
@@ -521,7 +541,7 @@ Since the design is focused on one CLI client, only one connection will be handl
 
 A considerable timeout has to be set on socket so that send/recv will not block CLI or daemon if one side unexpectedly terminates.
 
-### 3.13 WJH debug dump
+### 3.14 WJH debug dump
 
 Techsupport dump should include the WJH debug dump data.
 
@@ -559,24 +579,24 @@ A reply from daemon will be a text of debug dump from WJH. The text is the outpu
 
 *NOTE*: It is good to implement *deactive_cb*, so that if other docker takes control of WJH library (like neo, or customer specific container), the wjh will shutdown and print a log message that another application took control.
 
+## 4.5 wjhd user flow
+
+![wjhd user flow](/doc/wjh/wjhd_user_flow.svg)
+
 # 5 Warm Boot Support
 
 ## 5.1 System level
 
-WJH service will be shutdown prior to syncd as because of systemd dependencies, however ISSU start isn't called in syncd stop action, so in the *warm-reboot* script it needs to be stopped explicitely before ISSU start which is called on syncd's request for warm pre shutdown action. So before system goes kexec WJH will be able to shutdown properly and clean all resources. 
+WJH service hast to be shutdown prior to syncd and time sensetive services like BGP.
 
 ## 5.2 Service level
 
-WJH service level warm restart has no inpact on traffic.
-
-Other services warm restart (like swss, teamd) won't trigger WJH restart. Only syncd service restart triggers WJH service restart which makes sense because WJH depends on sxkernel service, however syncd service warm restart is not supported in SONiC in any case.
+No support.
 
 It is required to test the new service start impact on system performance during system *warm* startup to ensure no additional delay is added in control plane restoration time.
 
 # 6 Fast Boot Support
 
-No special support is required. However, it is required to test the new service start impact on system performance during system *fast* startup.
+WJH service has to be stopped prior to syncd and time sensetive services like BGP.
 
-# 7 Unit testing
-
-# 8 Open Questions
+# 7 Open Questions
