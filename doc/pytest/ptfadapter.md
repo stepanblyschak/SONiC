@@ -274,5 +274,5 @@ The above described method of running traffic tests seems to solve all above iss
 - no boilerplate code in PTF scripts that deserialize command line input
 - easy to use *ptfadpater* fixture to pass in to PTF testutils functions
 - logs/asserts from PTF framework are captured by py.test framework without additional integration
-- no seperate PTF invokations per each test case which improves performance
+- no seperate PTF invokations per each test case which improves execution time
 - easy to seperate test cases directly in py.test code
