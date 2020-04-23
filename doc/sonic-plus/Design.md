@@ -114,14 +114,13 @@ For what-just-happeend:
             {
               "name": "channel_type",
               "pretty_name": "Channel Type",
-              "description": "WJH channel type (raw/aggregated/direct_raw/aggregated_counter)",
+              "description": "WJH channel type (raw/aggregated/direct_raw)",
               "type": "choice",
               "optional": false,
               "choice_list": [
                 "raw",
                 "aggregated",
-                "direct_raw",
-                "aggregated_counter"
+                "direct_raw"
               ]
             },
             {
