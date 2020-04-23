@@ -181,3 +181,9 @@ config what-just-happened config channel create|remove [CHANNEL_NAME] [TYPE] [DR
 show what-just-happened [CHANNEL_NAME]  (show what-just-happened pull [CHANNEL_NAME])
 ```
 
+## sonic-plus feature versioning
+
+e.g.:
+
+mellanox/what-just-happpened:v1.0
+mellanox/what-just-happpened:v1.2
