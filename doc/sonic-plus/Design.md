@@ -185,5 +185,7 @@ show what-just-happened [CHANNEL_NAME]  (show what-just-happened pull [CHANNEL_N
 
 e.g.:
 
+```
 mellanox/what-just-happpened:v1.0
 mellanox/what-just-happpened:v1.2
+```
