@@ -54,7 +54,7 @@ The procedure of installing is:
 
 For what-just-happeend:
 
-```
+```json
 {
     "schema": {
       "name": "what-just-happened",
