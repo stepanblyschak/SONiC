@@ -81,7 +81,7 @@ Schema definition for this file is following:
 
 
 Path | Type | Description
---- | --- | --- | ---
+--- | --- | ---
 /name | string | Name of the application 
 /name/repository | string | Repository in docker registry 
 /name/description | string | Description of the application 
@@ -179,7 +179,7 @@ It is proposed to have the following files required for SONiC extention docker i
 2. schema.json
 3. additional_commands.json
 
-## manifest.json schema
+## Manifest schema definition
 
 The following table describes schema for version 1.0:
 
@@ -213,12 +213,12 @@ Example of manifest.json for featureA:
     "database"
   ],
   "docker_options": [
-    "--net=host",
+    "-v /dev/shm:/dev/shm:rw",
   ]
 }
 ```
 
-## schema.json format definition
+## Database schema definition
 
 schema.json is used to define the database tables that are relevant to the feature. The following table describes schema for version 1.0:
 
@@ -483,34 +483,111 @@ admin@sonic:~$ show cpu-time-report      # same because 'dump' is a default subc
 admin@sonic:~$ sonic-clear cpu-time-report stats
 ```
 
+## SONiC application extention entrypoint and process management
+
+SONiC application extention will be managed by SONiC supervisor, therefore it **must** provide a list of critical applications in processes.json, their arguments, and optional pre- and post-start commands to be executed within a container.
+
+Path | Type | Description
+--- | --- | ---
+/prestart | array | List of pre-start commands to execute
+/prestart/{{index}}/command | string | Command string
+/processes | array | List processes for supervisor
+/processes/{{index}}/path | string | Binary path
+/processes/{{index}}/arguments | string | Process arguments
+/poststart | array | List of post-start commands to execute
+/poststart/{{index}}/command | string | Command string
+/stop | array | List of stop commands to execute, NOTE: there is no pre-, post-stop. Stop is when supervisord terminates, no control wether command is run before processes are terminated or after.
+/stop/{{index}}command | string | Command string
+
+For example:
+```
+{
+    "prestart": [
+        "/usr/bin/command1",
+        "/usr/bin/command2"
+    ],
+    "processes": [
+        {
+            "path": "/usr/bin/command3",
+            "arguments": "--arg1 arg1"
+        },
+    ],
+    "poststart": [
+        "/usr/bin/command3",
+        "/usr/bin/command4"
+    ]
+}
+```
+
+SONiC extention infrastructure will take care of generating all the `supervisord` files and start a container with the appropriate entrypoint to make `supervisord` manage the processes execution.
+
+During installation procedure, SONiC extention installation tool will generate *supervisord.conf* based on *processes.json* file.
 
 # SONiC build system support
 
 SONiC build system has to be extended with support to build external extentions.
-It is proposed to reuse SONiC build infrastructure to be able to build out-of-tree extentions.
+SONiC build system will provide tree docker images to be used as a base to build SONiC extentions - *sonic-sdk-buildenv*, *sonic-sdk* and *sonic-sdk-dbg*.
 
-A new directory under *sonic-buildimage/extenstions/* is proposed to be added.
-SONiC build system will import *sonic-buildimage/extenstions/\*/rules.mk*.
-Build system user may add extentions he wants to be under this folder and SONiC build system will pick them up.
+*sonic-sdk-buildenv* will have common SONiC packages required to build SONiC application extention and will be a minimal version of sonic-slave container:
 
-Similary to ```make init``` which will recursively download all SONiC submodules, introducing another for extention repositories:
+- build-essential
+- libhiredis-dev
+- libnl*-dev
+- libswsscommon-dev
+- libsairedis-dev
+- libsaimeta-dev
+- libsaimetadata-dev
 
+*sonic-sdk* will be based on *docker-config-engine* with addition of packages needed at run time:
+
+- libhiredis
+- libnl*
+- libswsscommon
+- libsairedis
+- libsairedis
+- libsaimeta
+- libsaimetadata
+
+Corresponding *-dbg* packages will be added for *sonic-sdk-dbg* image.
+A list of packages will be extended on demand when a common package is required by community.
+If a package is required but is specific to the SONiC application extention it should not be added to this list.
+
+Developer of SONiC application extention can use those docker images to build his extention.
+It would be highly encouraged to laverage docker multi-staged build feature in this case:
+
+```Dockerfile
+
+FROM sonic-sdk-buildenv:202006.1-583bfde4 as build-env
+
+# Building packages here, like feature_1.0.0_amd64.deb
+
+FROM sonic-sdk:202006.1-583bfde4 as run-env
+
+# Copy artifacts from build environment 
+COPY --from=build-env ["feature_1.0.0_amd64.deb", "/"]
+
+# Installing packages
+
+LABEL tag=202006.0-af12ae64
 ```
-user@server:~$ make init-extention <path-to-git>
+
+# SONiC extention versioning
+
+*sonic-sdk* docker image will embed a label *sonic-version*, which *must* start with release number:
+
+```Dockerfile
+LABEL sonic-version=202006.0-af12ae64
 ```
 
-*rules.mk* should define a new build option to enable extention, so to build extention as standalone docker image:
-```
-user@server:~$ make SONIC_ENABLE_<EXTENTION>=y target/docker-extention1.gz
-```
+This will give a way to failure or warn the user during extention installation in case *sonic-version* label does not match SONiC version release.
 
-The tag that is going to be put to the docker image is up to feature to choose. It is usually a feature version tag.
-SONiC build system will
 
-If user wants to have extention built-in in the SONiC image by default, user can build a whole image in the same way:
-```
-user@server:~$ make SONIC_EXTENTIONS="<EXTENTION-SOURCE>" target/sonic-mellanox.bin
-```
+SONiC extention maintainer *must* be using the following convention when tagging docker images:
 
-This way is very similar to existing built-in feature and has the following pros:
-- 
+Tag | Comment
+--- | ---
+latest | The most recent version working for SONiC master
+<release-number> | The most recent version working for SONiC
+<anything-else> | Specific version, version *may* be not neccesary contain SONiC release number
+
+# Open questions
