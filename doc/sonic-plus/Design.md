@@ -587,7 +587,7 @@ SONiC extention maintainer *must* be using the following convention when tagging
 Tag | Comment
 --- | ---
 latest | The most recent version working for SONiC master
-<release-number> | The most recent version working for SONiC
-<anything-else> | Specific version, version *may* be not neccesary contain SONiC release number
+release-number (e.g. 202006) | The most recent version working for SONiC
+anything-else | Specific version, version *may* be not neccesary to contain SONiC release number
 
 # Open questions
