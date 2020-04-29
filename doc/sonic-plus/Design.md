@@ -16,6 +16,10 @@ This document provides an overview of the design of implementation of SONiC exte
 
 This document describes the high level design of SONiC extentions infrastructure.
 
+# Motivation
+
+
+
 # Definitions/Abbreviation
 
 # Overview
@@ -75,12 +79,13 @@ Commands:
 sonic-extention maintains its repository database in */var/lib/sonic-extention/repositories.json*.
 Schema definition for this file is following:
 
-```
-name        = 1*ALPHA ;
-repository  = 1*ALPHA ;
-description = 1*ALPHA ;
-status      = "installed"/"not installed"/"installation error"
-```
+
+Path | Type | Description
+--- | --- | --- | ---
+/name | string | Name of the application 
+/name/repository | string | Repository in docker registry 
+/name/description | string | Description of the application 
+/name/status | string | One of "Installed"/"Not installed"/"Installation error". Represents the application instalation status
 
 "Installation error" status is used when trying to installed incompatible container (not in SONiC extention format), general error during installation or failure during SONiC-2-SONiC migration procedure that will be described soon.
 
@@ -118,7 +123,7 @@ admin@sonic:~$ sudo sonic-extention repository add [NAME] [REPOSITORY] --descrip
 admin@sonic:~$ sudo sonic-extention repository remove [NAME]
 ```
 
-sonic-extention CLI should prevent user from deleting a repository with extention installed.
+sonic-extention CLI should prevent user from deleting a repository when extention is installed.
 
 Installation commands example:
 ```
@@ -128,14 +133,36 @@ admin@sonic:~$ # install latest version of featureA
 admin@sonic:~$ sudo sonic-extention install featureA --tag=latest
 ```
 
+An option "--tag" in CLI will allow user to use latest feature version.
+
+It will be possible to install the extention from a docker image file:
+
+```
+admin@sonic:~$ ls featureA.gz
+featureA.gz
+admin@sonic:~$ sudo sonic-extention install featureA.gz
+```
+
+This option should mainly be used for debugging, developing purpose, while the prefered way will be to pull the image from repository.
+Repository list is not updated in this case, because it was a local installation.
+
+Later, SONiC can come with a default list of trusted repositories.
+
 After installation, user can enable the feature:
 
 ```
 admin@sonic:~$ sudo config feature featureA enabled 
 ```
 
-An option "--tag" in CLI will allow user to use latest feature version.
 ```show version``` command can be used to display feature docker image version.
+
+# SONiC application extention interfaces
+
+
+
+Following common python practice to develop plugins there will be an empty package ```show.plugins``` and ```config.plugins```.
+Generated commands will be put in a module as part of plugins package. show and config commands should be updated to autodiscover those CLI plugins.
+
 
 # SONiC extention format
 
@@ -154,14 +181,14 @@ It is proposed to have the following files required for SONiC extention docker i
 
 ## manifest.json schema
 
-```
-; manifest schema definition
-version       = 1*DIGIT.1*DIGIT ; version of manifest definition
-name          = string          ; SONiC extention name
-requires      = 1*string        ; List of required SONiC core services
-after         = 1*string        ; List of SONiC core services to start after
-dockerOptions = 1*string        ; List of docker container run options
-```
+Path | Type | Description
+--- | --- | --- | ---
+/version | string | Version of manifest file definition
+/name | string | Application name
+/requires | list of strings | List of SONiC core services the application requires
+/after | list of strings | List of SONiC core services the application is set to start after
+/docker_options | list of strings | List of options, appened to docker run when starting the container
+
 
 A required "version" field can be used in case the format of manifest.json is changed in the future. In this case a migration script can be applied to convert format to the recent version. This is like SONiC has version inside CONFIG DB.
 "requires" and "after" is related to service management, it maps to systemd service attributes and can be extented in the future if needed. "dockerOptions" are used to autogenerate service start/stop script from *docker_image_ctl.j2* file. It is required to have this file as part of SONiC image and put it in */usr/share/sonic/templates/*.
@@ -182,7 +209,7 @@ Example of manifest.json for featureA:
     "syncd",
     "database"
   ],
-  "dockerOptions": [
+  "docker_options": [
     "--net=host",
   ]
 }
@@ -190,200 +217,191 @@ Example of manifest.json for featureA:
 
 ## schema.json format definition
 
-schema.json is used to define the database tables that are relevant to the feature:
+schema.json is used to define the database tables that are relevant to the feature. The following table describes schema for version=1.0:
 
-```
-; common definitions
-string = 1*ALPHA
+Path | Type | Description
+--- | --- | --- | ---
+/version | string | Version of schema definition
+/dbs | array | Array of databases
+/dbs/{{index}}/name | string | Database name
+/dbs/{{index}}/tables | array | Array of tables defined in the database
+/dbs/{{index}}/tables/{{index}}/name | string | Database table name
+/dbs/{{index}}/tables/{{index}}/keys | array | Array of keys definitions in the table
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/type | string | A choice of "predefined"/"object" depending on nature of keyss that reside in this table
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/name | string | A name of the key, for "predefined" also a defined key name. It will be used for CLI sub-command name or REST API path
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/operations | array | List of database operations available: "get", "set", "mod", "del". It will map to CLI "show" or "config" or to REST API - GET, POST, PUT/PATCH or DELETE
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/description | string | Description of the keys
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields | array | Array of field definitions
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/name | string | Database name of the field
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/description | string | Description for the field
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/pretty_name | string | Pretty name of the field (e.g. used as a column name in CLI)
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/reload_required | bool | Wether chaning of the field requires service restart (e.g. CLI will generate a promt to ask user to restart the service)
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/value/type | string | Type of value, one of "intrange"/"int"/"bool"/"choice"/"list"/"reference"/"ipaddress"
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/value/intmin | int | Minimum integer value, valid if type is "intrange"
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/value/intmax | int | Maximum integer value, valid if type is "intrange"
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/value/choice_list | array | List of choices, valid if type is "choice" or "list"
+/dbs/{{index}}/tables/{{index}}/keys/{{index}}/fields/{{index}}/value/choice_table | string | Table name, user interface will generate a validation wether value is valid key inside given table, valid if type is "reference"
 
-; values definition
-type                  = "intrange"/"int"/"choice"/"list"/"reference" ; type of field value, can be easy mapped to click.Type for CLI
-intmax                = 1*DIGIT  ; valid for type="intrange", defines a maximum valid for this field
-intmin                = 1*DIGIT  ; valid for type="intrange", defines a minimum valid for this field
-choiceList            = 1*string ; valid for type="choice", a list of strings of valid choices for this field
-choiceTable           = string   ; valid for type="reference", database table name which has valid object for this field value
-valueType             = (type [intmax] [intmin] [choiceList] [choiceTable])
-
-; cli options definition
-commands   = 1*("show"/"config") ; which commands to generate
-subcommand = string ; subcommand name; defines wether to create a sub-command
-                    ; if not specified will use a root command for feature
-defaultsubcommand = BOOL ; whether defined subcommand is default subcommand, default is FALSE
-clioptions = (commands subcommand [defaultsubcommand])
-
-; fields definition
-name                  = string    ; DB field name
-prettyName            = string    ; optional pretty name for this field; for example, used as a column name for show CLI commands
-description           = string    ; optional description for the field, used for generating help message for CLI
-value                 = valueType ;
-requiresServiceReload = BOOL      ; whether changing this field value requires service restart, default is FALSE
-                                  ; when True, CLI promts for service restart.
-field                 = (name value [prettyName] [description] [requiresServiceReload])
-
-; key definition
-type        = "predefined"/"object" ; defines a type of keys in the table
-                                    ; whether keys are object/entries names or a predefined key
-                                    ; (e.g. "global" key for global configuration)
-name        = string  ; valid for type="predefined", a name for predefined key
-description = string  ; optional description used to generate CLI help for example
-fields      = 1*field ; list of fields defined for this type of key
-key         = (type name fields [description])
-
-; table definition
-name       = string ; table name
-keys       = 1*key ; list of keys definition in the table
-cli        = clioptions ; cli generation options
-table      = (name keys cli)
-
-; db definition
-name   = "CONFIG_DB" ; only for CONFIG_DB CLI is generated for now
-tables = 1*table ; list of table definitions
-db     = (name tables)
-
-; schema definition
-version = [0-9]+.[0-9]+ ; version of schema definition
-dbs = 1*db ; list of database definitions
-schema = (version dbs)
-```
-
-From the above data, it is possible to generate CLI commands.
-Following common python practice to develop plugins there will be an empty package ```show.plugins``` and ```config.plugins```.
-Generated commands will be put in a module as part of plugins package. show and config commands should be updated to autodiscover those CLI plugins.
-
-Based on the above, the following CLI commands will be generated:
-
-```
-# for table of predefined keys
-config <feature> <predefined-key> <field-name> <field-value>
-
-# for table of objects
-config <feature> <table-name> create [NAME] [--<field-name>=<field-value>]*
-
-# show  for predefined keys
-show <feature> <predefined-key>
-FIELD #1   FIELD #2   FIELD #3
----------  ---------  ---------
-VALUE #1   VALUE #2   VALUE #3
-
-
-# show for table objects
-show <feature> <table-name>
-Name   FIELD #1   FIELD #2   FIELD #3
------  ---------  ---------  ---------
-obj1   value 1    value 2    value #3
-``` 
-
-Example of schema.json for featureA:
+From the above data, it is possible to generate CLI commands. Example is given for an application that monitors CPU time for select processes and reports the statistics to the remote collectors:
 
 ```json
 {
-  "schema": {
-    "dbs": [
-      {
-        "name": "CONFIG_DB",
-        "tables": [
-          {
-            "name": "FEATUREA",
-            "keys": [
-              {
-                "type": "predefined",
-                "name": "global",
-                "description": "Feature A global configuration",
-                "fields": [
-                  {
-                    "name": "field_1",
-                    "prettyName": "Field 1",
-                    "description": "Field 1 configuration",
-                    "value": {
-                      "type": "int"
-                    }
-                  },
-                  {
-                    "name": "field_2",
-                    "prettyName": "Field 2",
-                    "description": "Field 2 configuration",
-                    "value": {
-                      "type": "choice",
-                      "choiceList": [
-                        "X",
-                        "Y",
-                      ]
-                    }
+  "version": "1.0",
+  "dbs": [
+    {
+      "name": "CONFIG_DB",
+      "tables": [
+        {
+          "name": "CPU_REPORT",
+          "keys": [
+            {
+              "type": "predefined",
+              "name": "global",
+              "operations": [
+                "get",
+                "set"
+              ],
+              "description": "Global configuration for cpu time report application",
+              "fields": [
+                {
+                  "name": "enable",
+                  "pretty_name": "Enabled",
+                  "description": "Enable/disable the application",
+                  "value": {
+                    "type": "bool"
                   }
-                ]
-              }
-            ],
-            "clioptions": {
-              "commands": [
-                "show",
-                "config"
+                },
+                {
+                  "name": "poll_interval",
+                  "pretty_name": "Polling interval (s)",
+                  "description": "Polling interval in seconds",
+                  "value": {
+                    "type": "int"
+                  }
+                }
               ]
             }
-          },
-          {
-            "name": "FEATUREA_OBJECT",
-            "keys": [
-              {
-                "type": "object",
-                "description": "Feature A objects configuration",
-                "fields": [
-                  {
-                    "name": "obj_field_1",
-                    "prettyName": "Object Field 1",
-                    "description": "Field 1 configuration",
-                    "value": {
-                      "type": "int"
-                    }
-                  }
-                ]
-              }
-            ],
-            "clioptions": {
-              "commands": [
-                "show",
-                "config"
+          ]
+        },
+        {
+          "name": "CPU_REPORT_PROCESS",
+          "keys": [
+            {
+              "type": "object",
+              "name": "counter",
+              "operations": [
+                "get",
+                "set",
+                "mod",
+                "del"
               ],
-              "subcommand": "object"
+              "description": "Procecss CPU time counter",
+              "fields": [
+                 {
+                  "name": "name",
+                  "pretty_name": "Process name",
+                  "description": "Process name to monitor",
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              ]
             }
-          }
-        ]
-      }
-    ]
-  }
+          ]
+        },
+        {
+          "name": "CPU_REPORT_COLLECTOR",
+          "description": "Remote collector configuration",
+          "keys": [
+            {
+              "type": "object",
+              "name": "collector",
+              "operations": [
+                "get",
+                "set",
+                "mod",
+                "del"
+              ],
+              "fields": [
+                {
+                  "name": "address",
+                  "pretty_name": "Address",
+                  "description": "Collector's IP address",
+                  "value": {
+                    "type": "ipaddress"
+                  }
+                },
+                {
+                  "name": "port",
+                  "pretty_name": "Port",
+                  "description": "Collector's port",
+                  "value": {
+                    "type": "intrange",
+                    "intmin": "1024",
+                    "intmax": "65000"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
 ```
 
 The above example generates:
 
-Table of predefined keys:
+For cpu-time-report global configuration:
 ```
-admin@sonic:~$ sudo config featureA global field-1 5
-admin@sonic:~$ sudo config featureA global field-2 X
+admin@sonic:~$ sudo config cpu-time-report global enable
+admin@sonic:~$ sudo config cpu-time-report global poll-interval 5
 ```
 
-Table of objects:
+For tables containing objects, e.g. CPU_REPORT_PROCESS table:
 ```
-admin@sonic:~$ sudo config featureA object create obj1 --obj-field-1=7
-admin@sonic:~$ sudo config featureA object remove obj1
+admin@sonic:~$ sudo config cpu-time-report counter create orchagent-counter --name=orchagent
+admin@sonic:~$ sudo config cpu-time-report counter create syncd-counter --name=syncd
+admin@sonic:~$ sudo config cpu-time-report counter remove orchagent-counter
+```
+
+```
+admin@sonic:~$ sudo config cpu-time-report collector create my_collector --address=10.0.0.1 --port=8888
+admin@sonic:~$ sudo config cpu-time-report collector remove my_collector
 ```
 
 Show for predefined keys:
 ```
-admin@sonic:~$ show featureA global
-FIELD 1    FIELD 2
+admin@sonic:~$ show cpu-time-report global
+Enabled    Polling interval (s)
 ---------  ---------
-5          X
+True       5
 ```
 
-Show for table objects:
+Show for process and collectors:
+
 ```
-admin@sonic:~$ show featureA object
-Name   Object field 1   
------  ---------------
-obj1   7
+admin@sonic:~$ show cpu-time-report counter
+Name                Process Name   
+------------------  ---------------
+orchagent-counter   orchagent
+syncd-counter       syncd
 ```
 
-## additional_commands.json schema definition
+```
+admin@sonic:~$ show cpu-time-report collector
+Name           Address     Port
+-------------  ----------  ------
+my_collector   10.0.0.1    8888
+``` 
+
+## Arbitary commands execution within docker container
+
+Some features may require executing a seperate command within a docker container. This command should be a subcommand in SONiC command line interface.
+Therefore, additional file is required to autogenerate such commands - *additional_commands.json*.
+
+### additional_commands.json schema definition
 
 additional_commands.json is used to generate CLI commands that wrap a binary inside a docker container.
 Example usage for non-trivial show commands, which do not look at database.
@@ -403,31 +421,62 @@ positionalArgs    = 1*argument
 optionalArgs      = 1*argument
 ```
 
-Example for featureA:
+Path | Type | Description
+--- | --- | --- | ---
+/version | string | Version of schema definition
+/additional_commands | array | Array of additional commands
+/additional_commands/{{index}}/executable | string | Executable name inside container, absolute path or name if binary is in the $PATH
+/additional_commands/{{index}}/name | string | Name of the command, used for CLI command generation or REST API path
+/additional_commands/{{index}}/description | string | Description of the command
+/additional_commands/{{index}}/operation | string | Valid operations, "get", "del", which are mapped to CLI "show", "sonic-clear or REST API GET and DELETE
+/additional_commands/{{index}}/positional_arguments | array | Array of positional arguments passed to binary
+/additional_commands/{{index}}/positional_arguments/{{index}}/name | string | Positional argument name
+/additional_commands/{{index}}/positional_arguments/{{index}}/description | string | Positional argument description
+/additional_commands/{{index}}/positional_arguments/{{index}}/value/type | string | Type of value, one of "intrange"/"int"/"bool"/"choice"/"list"/"reference"/"ipaddress"
+/additional_commands/{{index}}/positional_arguments/{{index}}/value/intmin | int | Minimum integer value, valid if type is "intrange"
+/additional_commands/{{index}}/positional_arguments/{{index}}/value/intmax | int | Maximum integer value, valid if type is "intrange"
+/additional_commands/{{index}}/positional_arguments/{{index}}/value/choice_list | array | List of choices, valid if type is "choice" or "list"
+/additional_commands/{{index}}/positional_arguments/{{index}}/value/choice_table | string | Table name, user interface will generate a validation wether value is valid key inside given table, valid if type is "reference"
+/additional_commands/{{index}}/optional_arguments | array | Array of positional arguments passed to binary
+/additional_commands/{{index}}/optional_arguments/{{index}}/name | string | Optional argument name (e.g. "-c", "--collector")
+/additional_commands/{{index}}/optional_arguments/{{index}}/description | string | Optional argument description
+/additional_commands/{{index}}/optional_arguments/{{index}}/value/type | string | Type of value, one of "intrange"/"int"/"bool"/"choice"/"list"/"reference"/"ipaddress"
+/additional_commands/{{index}}/optional_arguments/{{index}}/value/intmin | int | Minimum integer value, valid if type is "intrange"
+/additional_commands/{{index}}/optional_arguments/{{index}}/value/intmax | int | Maximum integer value, valid if type is "intrange"
+/additional_commands/{{index}}/optional_arguments/{{index}}/value/choice_list | array | List of choices, valid if type is "choice" or "list"
+/additional_commands/{{index}}/optional_arguments/{{index}}/value/choice_table | string | Table name, user interface will generate a validation wether value is valid key inside given table, valid if type is "reference"
+
+
+Example for cpu-time-report:
 
 ```json
 {
   "version": "1.0",
-  "additionalCommands": [
+  "additional_commands": [
     {
-      "executable": "/usr/bin/featureA",
-      "positionalArgs": [
-        {
-          "value": {
-            "type": "reference",
-            "choiceTable": "FEATUREA_OBJECT"
-          },
-          "name": "object",
-          "description": "existing object from FEATUREA_OBJECT table"
-        }
+      "executable": "/usr/bin/generate_dump",
+      "positional_arguments": [
       ],
-      "clioptions": {
-        "commands": [
-          "show",
-        ],
-        "subcommand": "execute",
-        "defaultsubcommand": true
-      }
+      "optional_arguements": [
+      ],
+      "name": "dump",
+      "description": "generate process monitoring dump",
+      "default": true,
+      "operation": [
+        "get"
+      ]
+    },
+    {
+      "executable": "/usr/bin/clear_stats",
+      "positional_arguments": [
+      ],
+      "optional_arguements": [
+      ],
+      "name": "stats",
+      "description": "Clear process statistic",
+      "operation": [
+        "del"
+      ]
     }
   ]
 }
@@ -436,6 +485,42 @@ Example for featureA:
 Will generate the following command:
 
 ```
-admin@sonic:~$ show featureA execute
-admin@sonic:~$ show featureA  # same because 'execute' is a default subcommand
+admin@sonic:~$ show cpu-time-report dump
+admin@sonic:~$ show cpu-time-report      # same because 'dump' is a default subcommand
 ```
+
+```
+admin@sonic:~$ sonic-clear cpu-time-report stats
+```
+
+
+# SONiC build system support
+
+SONiC build system has to be extended with support to build external extentions.
+It is proposed to reuse SONiC build infrastructure to be able to build out-of-tree extentions.
+
+A new directory under *sonic-buildimage/extenstions/* is proposed to be added.
+SONiC build system will import *sonic-buildimage/extenstions/\*/rules.mk*.
+Build system user may add extentions he wants to be under this folder and SONiC build system will pick them up.
+
+Similary to ```make init``` which will recursively download all SONiC submodules, introducing another for extention repositories:
+
+```
+user@server:~$ make init-extention <path-to-git>
+```
+
+*rules.mk* should define a new build option to enable extention, so to build extention as standalone docker image:
+```
+user@server:~$ make SONIC_ENABLE_<EXTENTION>=y target/docker-extention1.gz
+```
+
+The tag that is going to be put to the docker image is up to feature to choose. It is usually a feature version tag.
+SONiC build system will
+
+If user wants to have extention built-in in the SONiC image by default, user can build a whole image in the same way:
+```
+user@server:~$ make SONIC_EXTENTIONS="<EXTENTION-SOURCE>" target/sonic-mellanox.bin
+```
+
+This way is very similar to existing built-in feature and has the following pros:
+- 
