@@ -181,12 +181,12 @@ It is proposed to have the following files required for SONiC extention docker i
 
 ## manifest.json schema
 
-Path | Type | Description
---- | --- | --- | ---
-/version | string | Version of manifest file definition
-/name | string | Application name
-/requires | list of strings | List of SONiC core services the application requires
-/after | list of strings | List of SONiC core services the application is set to start after
+Path            | Type            | Description
+--------------- | --------------- | -------------------------------------------------------------------
+/version        | string          | Version of manifest file definition
+/name           | string          | Application name
+/requires       | list of strings | List of SONiC core services the application requires
+/after          | list of strings | List of SONiC core services the application is set to start after
 /docker_options | list of strings | List of options, appened to docker run when starting the container
 
 
@@ -220,7 +220,7 @@ Example of manifest.json for featureA:
 schema.json is used to define the database tables that are relevant to the feature. The following table describes schema for version=1.0:
 
 Path | Type | Description
---- | --- | --- | ---
+--- | --- | ---
 /version | string | Version of schema definition
 /dbs | array | Array of databases
 /dbs/{{index}}/name | string | Database name
@@ -422,7 +422,7 @@ optionalArgs      = 1*argument
 ```
 
 Path | Type | Description
---- | --- | --- | ---
+--- | --- | ---
 /version | string | Version of schema definition
 /additional_commands | array | Array of additional commands
 /additional_commands/{{index}}/executable | string | Executable name inside container, absolute path or name if binary is in the $PATH
