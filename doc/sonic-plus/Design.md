@@ -181,13 +181,15 @@ It is proposed to have the following files required for SONiC extention docker i
 
 ## manifest.json schema
 
-Path            | Type            | Description
---------------- | --------------- | -------------------------------------------------------------------
-/version        | string          | Version of manifest file definition
-/name           | string          | Application name
-/requires       | list of strings | List of SONiC core services the application requires
-/after          | list of strings | List of SONiC core services the application is set to start after
-/docker_options | list of strings | List of options, appened to docker run when starting the container
+The following table describes schema for version 1.0:
+
+| Path           | Type            | Description
+|--------------- | --------------- | -------------------------------------------------------------------
+|/version        | string          | Version of manifest file definition
+|/name           | string          | Application name
+|/requires       | list of strings | List of SONiC core services the application requires
+|/after          | list of strings | List of SONiC core services the application is set to start after
+|/docker_options | list of strings | List of options, appened to docker run when starting the container
 
 
 A required "version" field can be used in case the format of manifest.json is changed in the future. In this case a migration script can be applied to convert format to the recent version. This is like SONiC has version inside CONFIG DB.
@@ -217,7 +219,7 @@ Example of manifest.json for featureA:
 
 ## schema.json format definition
 
-schema.json is used to define the database tables that are relevant to the feature. The following table describes schema for version=1.0:
+schema.json is used to define the database tables that are relevant to the feature. The following table describes schema for version 1.0:
 
 Path | Type | Description
 --- | --- | ---
@@ -406,20 +408,7 @@ Therefore, additional file is required to autogenerate such commands - *addition
 additional_commands.json is used to generate CLI commands that wrap a binary inside a docker container.
 Example usage for non-trivial show commands, which do not look at database.
 
-```
-; argument definition
-value       = valueType ; defined previously
-name        = string ; name for positional, option name for optional (e.g. '-o'/'--option')
-description = string
-argument    = (value name description)
-
-; additional commands definition
-version           = [0-9]+.[0-9]+ ; version of commands definition
-cli               = clioptions ; cli options for additional command generation
-executable        = string ; name of executable inside container
-positionalArgs    = 1*argument
-optionalArgs      = 1*argument
-```
+The following table describes schema for version 1.0:
 
 Path | Type | Description
 --- | --- | ---
@@ -428,7 +417,7 @@ Path | Type | Description
 /additional_commands/{{index}}/executable | string | Executable name inside container, absolute path or name if binary is in the $PATH
 /additional_commands/{{index}}/name | string | Name of the command, used for CLI command generation or REST API path
 /additional_commands/{{index}}/description | string | Description of the command
-/additional_commands/{{index}}/operation | string | Valid operations, "get", "del", which are mapped to CLI "show", "sonic-clear or REST API GET and DELETE
+/additional_commands/{{index}}/operation | string | Valid operations, "get", "del", which are mapped to CLI "show", "sonic-clear" or for REST API maps to GET, DELETE
 /additional_commands/{{index}}/positional_arguments | array | Array of positional arguments passed to binary
 /additional_commands/{{index}}/positional_arguments/{{index}}/name | string | Positional argument name
 /additional_commands/{{index}}/positional_arguments/{{index}}/description | string | Positional argument description
