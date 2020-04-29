@@ -183,13 +183,14 @@ It is proposed to have the following files required for SONiC extention docker i
 
 The following table describes schema for version 1.0:
 
-| Path           | Type            | Description
-|--------------- | --------------- | -------------------------------------------------------------------
-|/version        | string          | Version of manifest file definition
-|/name           | string          | Application name
-|/requires       | list of strings | List of SONiC core services the application requires
-|/after          | list of strings | List of SONiC core services the application is set to start after
-|/docker_options | list of strings | List of options, appened to docker run when starting the container
+
+Path | Type | Description
+--- | --- | ---
+/version        | string          | Version of manifest file definition
+/name           | string          | Application name
+/requires       | list of strings | List of SONiC core services the application requires
+/after          | list of strings | List of SONiC core services the application is set to start after
+/docker_options | list of strings | List of options, appened to docker run when starting the container
 
 
 A required "version" field can be used in case the format of manifest.json is changed in the future. In this case a migration script can be applied to convert format to the recent version. This is like SONiC has version inside CONFIG DB.
