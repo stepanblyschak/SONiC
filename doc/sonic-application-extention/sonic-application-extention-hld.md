@@ -3,7 +3,6 @@
 
 # Table of Contents
 - [High Level Design Document](#high-level-design-document)
-      - [Rev 0.2](#rev-02)
 - [Table of Contents](#table-of-contents)
 - [List of Figures](#list-of-figures)
 - [Revision](#revision)
@@ -14,66 +13,35 @@
 - [1.1 Feature Overview](#11-feature-overview)
 - [1.2 Motivation](#12-motivation)
 - [1.3 Requirements](#13-requirements)
-  - [Functional requirements](#functional-requirements)
-      - [SONiC Application Extension](#sonic-application-extension)
-      - [SONiC Application Extension Infrastructure](#sonic-application-extension-infrastructure)
 - [2. Design](#2-design)
-      - [Assumptions](#assumptions)
 - [2.1 Basic concepts](#21-basic-concepts)
-          - [Figure 2.1: Basic Concepts](#figure-21-basic-concepts)
-- [2.2 SONiC Application Extension Library API](#22-sonic-application-extension-library-api)
-- [2.3 SONiC Application Extension Database](#23-sonic-application-extension-database)
-- [2.4 SONiC Application Extension Command Line Interface](#24-sonic-application-extension-command-line-interface)
-      - [CLI](#cli)
-      - [List of repositories available](#list-of-repositories-available)
-      - [Repository management](#repository-management)
-      - [Extension Installation](#extension-installation)
-      - [Extension Upgrade](#extension-upgrade)
+- [2.2 SONiC Package Manager](#22-sonic-package-manager)
+- [2.3 SONiC Package Versioning](#23-sonic-package-versioning)
+- [2.4 SONiC Package Manager Command Line Interface](#24-sonic-package-manager-command-line-interface)
 - [2.5 Manifest File](#25-manifest-file)
 - [2.6 Redis Database](#26-redis-database)
 - [2.7 Logging](#27-logging)
 - [2.8 YANG model](#28-yang-model)
-          - [Manifest file path](#manifest-file-path)
 - [2.9 Initial Extension Configuration](#29-initial-extension-configuration)
-          - [Manifest file path](#manifest-file-path-1)
 - [2.10 User Interface](#210-user-interface)
   - [2.10.1 SONiC Command Line Utilities](#2101-sonic-command-line-utilities)
-    - [SONiC Utilities plugin support](#sonic-utilities-plugin-support)
-    - [SONiC Application Extension Plugin Auto-generation](#sonic-application-extension-plugin-auto-generation)
-          - [Usage](#usage)
   - [2.10.2 SONiC Management Framework Integration](#2102-sonic-management-framework-integration)
-    - [SONiC Application Extension REST API](#sonic-application-extension-rest-api)
-          - [Figure 2.2: SONiC REST API Extension. Basic approach](#figure-22-sonic-rest-api-extension-basic-approach)
-      - [STATE DB](#state-db)
-          - [Manifest file path](#manifest-file-path-2)
   - [2.10.3 SONiC Klish Command Line Interface](#2103-sonic-klish-command-line-interface)
-          - [Manifest file path](#manifest-file-path-3)
   - [2.10.4 SONiC Telemetry Integration](#2104-sonic-telemetry-integration)
-          - [Figure 2.2: SONiC Telemetry Extension. Basic approach](#figure-22-sonic-telemetry-extension-basic-approach)
-      - [STATE DB](#state-db-1)
-          - [Manifest file path](#manifest-file-path-4)
 - [2.11 Processes and entry point](#211-processes-and-entry-point)
-          - [Manifest file path](#manifest-file-path-5)
 - [2.12 Feature Concept Integration](#212-feature-concept-integration)
 - [2.13 Multi-ASIC support](#213-multi-asic-support)
 - [2.14 Multi-DB support](#214-multi-db-support)
 - [2.15 Orchagent](#215-orchagent)
 - [2.16 Configuration Reload](#216-configuration-reload)
 - [2.17 Warm restart](#217-warm-restart)
-          - [Manifest file path](#manifest-file-path-6)
 - [2.18 Debuggability](#218-debuggability)
-          - [Manifest file path](#manifest-file-path-7)
 - [2.19 SONiC-2-SONiC upgrade](#219-sonic-2-sonic-upgrade)
 - [2.20 SONiC Processes and Docker Statistics Telemetry Support](#220-sonic-processes-and-docker-statistics-telemetry-support)
 - [2.21 SONiC Application Extension Constrains](#221-sonic-application-extension-constrains)
-  - [Conflicting Functionality](#conflicting-functionality)
-        - [Case 1. SONiC Application Extension Conflicts with Another Optional Feature](#case-1-sonic-application-extension-conflicts-with-another-optional-feature)
-        - [Case 2. SONiC Application Extension Conflicts with Built-In SONiC SWSS functionality](#case-2-sonic-application-extension-conflicts-with-built-in-sonic-swss-functionality)
-          - [Manifest file path](#manifest-file-path-8)
 - [2.22 SONiC Application Extension versioning](#222-sonic-application-extension-versioning)
 - [2.23 SONiC Build System](#223-sonic-build-system)
 - [3. SONiC Application Extension Example](#3-sonic-application-extension-example)
-          - [Auto-generated SONiC Utilities CLI](#auto-generated-sonic-utilities-cli)
 - [Open issues](#open-issues)
 
 # List of Figures
@@ -132,12 +100,13 @@ This document while describing how SONiC application extension will be implement
 ## Functional requirements
 
 #### SONiC Application Extension
-- Provides its functionality as another Docker container running alongside SONiC core services
+- Provides its functionality as another Docker container running alongside with other SONiC services
 - Distributed as a Docker image available though Docker Hub or private registry
 - Docker image contains metadata required for SONiC Application Extension infrastructure to integrate the feature properly with other SONiC components
 - Can support warm-, fast-restart and must not break existing warm-, fast-restart functionality
 
 #### SONiC Application Extension Infrastructure
+- Every other core SONiC docker image is also a subject to the infrastructure
 - Provides an interface to manage application extensions
 - Performs validation of SONiC Application Extension Docker image
 - Provides SONiC Application Extension versioning mechanism
@@ -159,7 +128,7 @@ This document while describing how SONiC application extension will be implement
 
 #### Assumptions
 
-For simplicity, it is assumed that a SONiC application extension name is the same as the feature name, the same as service name and the same as docker container name.
+For simplicity, it is assumed that a SONiC application package name is the same as the feature name, the same as service name and the same as docker container name.
 
 # 2.1 Basic concepts
 
@@ -189,117 +158,59 @@ User flow to upgrade SONiC extension:
 
 
 SONiC Application Extension ***must*** provide a ***manifest*** file used to tell SONiC Application Extension Infrastructure how to integrate the extension with the rest of SONiC core services.
-A manifest must exist inside an image under */var/lib/sonic-extension/\<extension-name\>/manifest.json*.
+A manifest must exist inside an image under */var/lib/sonic-packages/\<extension-name\>/manifest.json*.
 
-# 2.2 SONiC Application Extension Library API
+# 2.2 SONiC Package Manager
 
-SONiC application extension framework will provide API as a python library. A new folder with python package code will be added to the sonic-buildimage *src/sonic-extension*. CLI and daemons which need access SAE information will be able to import it in the python code as package *sonic_extension*.
+As any mature operating system distribution SONiC will use its own package management solution and provide a utility to manage packages. SONiC Package Manager will use a persistent storage for its purposes at */var/lib/sonic-packages/* on the host OS. There are going to be a *repositories.json* file as well as a directory per each SONiC package with a package metadata. A database will have the following structure:
 
-```python
-
-""" Tuple of fields that describe the repository """
-SonicAppExtensionRepositoryFields = namedtuple("SonicAppExtensionRepositoryFields", "name, repository, description")
-
-class SonicAppExtensionRepository(SonicAppExtensionRepositoryFields):
-  """ Represents repository entry in SonicExtensionDB """
-
-  def get_tags():
-    """ Returns a list of tags available in repository using docker registry API
-    @return: list of tags
-    """
-    pass
-
-
-class SonicAppExtension:
-  """ Represents installed SONiC application extension """
-
-  def get_manifest():
-    """ Returns SONiC application extension manifest
-    @return: manifest dictionary
-    """
-    pass
-
-
-class SonicAppExtensionAPI:
-  """ Provides API to manage SONiC application application extensions """
-
-  def get_repositories():
-    """ Return available SONiC repositories from DB
-    @return: Dictionary SONiC extension name -> SonicExtensionRepository
-    """
-    pass
-
-  def add_repository(repository):
-    """ Add SONiC application extension repository to DB
-    @param: repository: SonicExtensionRepository instance
-    """
-    pass
-
-  def remove_repository(name):
-    """ Removes SONiC application extension repository from DB
-    @param: name: SONiC application extension name
-    """
-    pass
-
-  def install_extension(name, tag=None):
-    """ Install SONiC application extension in system
-    @param: name: SONiC application extension name
-    @param: tag: SONiC application extension specific tag to install
-    """
-    pass
-
-  def upgrade_extension(name, tag=None):
-    """ Upgrade installed SONiC application extension
-    @param: name: SONiC application extension name
-    @param: tag: SONiC application extension specific tag to install
-    """
-    pass
-
-  def remove_extension(name):
-    """ Remove installed SONiC application extension
-    @param: name: SONiC application extension name
-    """
-    pass
-
-  def get_extension(name):
-    """ Get SONiC application extension installed in system by name
-    @param: name: SONiC application extension name
-    @return: SonicExtension instance
-    """
-    pass
+```
+/
+  var/
+    lib/
+      sonic-packages/
+        repositories.json
+        database/
+        swss/
+        snmp/
+        featureX/
+        featureY/
+        featureZ/
 ```
 
-# 2.3 SONiC Application Extension Database
-
-SONiC Application Extension Infrastructure must use a persistent storage for its purposes. Redis DB is not an option since it will require to guaranty persistency across reboot and upgrades, etc.
-
-SONiC Application Extension Infrastructure will use */var/lib/sonic-extension/* and */var/run/sonic-extension/* directories on the host OS for storing persistent and runtime data respectively.
-
-SONiC Application Extension Infrastructure will maintain its own database of repositories and features.
-The file containing all available repositories will be placed at */var/lib/sonic-extension/repositories.json*. Users/Applications are only allowed to use SONiC Application Extension Library API and not use this directory directly.
-
-For each extension dedicated folders */var/lib/sonic-extension/\<extension-name\>/* and */var/run/sonic-extension/\<extension-name>/* are created.
+A locking mechanism will be used in order to make a package operation (installation, de-installation, upgrades) in atomic manner. For this a lock file */var/lib/sonic-packages/lock* will be created on every operation and released once operation is completed to guaranty that the database will be consistent if two or more operations are done at the same time.
 
 Schema definition for *repositories.json* file is following:
 
-Path                | Type     | Description
-------------------- | -------- | -------------------------------------------
-/name               | string   | Name of the Application Extension
-/name/repository    | string   | Repository in Docker registry
-/name/description   | string   | Application description field
-/name/tags          | list     | A list of tags that can be installed
-/name/default_tag   | string   | A tag which will be installed by default
+Path                | Type               | Description
+------------------- | ------------------ | -------------------------------------------
+/name               | string             | Name of the package.
+/name/repository    | string             | Repository in Docker registry or just an image name if a package was installed manually from local image.
+/name/description   | string             | Application description field.
+/name/tags          | list of strings    | A vector of versions tested to be compatible with the running SONiC base image release.
+/name/default-tag   | string             | A tag which points to a package that will be a default installation candidate if not specified other.
+/name/essential     | boolean            | A flag if a SONiC package is an essential package
 
 
 An example of a content in JSON format:
 
 ```json
 {
+  "database": {
+    "repository": "docker-database",
+    "description": "SONiC database service",
+    "essential": true
+  },
+  "swss": {
+    "image": "docker-orchagent",
+    "description": "SONiC switch state service",
+    "essential": true
+  },
   "cpu-report": {
     "repository": "Azure/cpu-report",
     "description": "CPU time report feature",
     "tags": ["1.0", "1.1"],
-    "default_tag": "1.1"
+    "default-tag": "1.1"
   },
   "featureXXX": {
     "repository": "user/featureXXX",
@@ -310,61 +221,94 @@ An example of a content in JSON format:
 }
 ```
 
-SONiC image will come with default *repositories.json* with application extension features listed once they become available.
+SONiC image will come with default *repositories.json* with SONiC core services listed as well as optional applications extensions. Note, that a core SONiC service might not have a "tag" as well as "default-tag" information listed for the package. This is allowed to simplify transition to use the same packaging infrastructure for all docker containers. In the future, once a core service becomes a SONiC compatible docker image package and uploaded to Docker Hub that information will be listed for core SONiC packages as well.
 
-# 2.4 SONiC Application Extension Command Line Interface
+# 2.3 SONiC Package Versioning
 
-To manage SONiC application extensions there will be a new CLI utility added called *sonic-extension*. Here is the CLI interface of sonic-extension utility:
+To decouple SONiC containers from SONiC base OS image they need to have a separate versioning, because now a SONiC OS  The format of SONiC base OS image version is the following: *${RELEASE_NUMBER}.${BUILD_NUMBER}-${BUILD_HASH}*. The build number is not reliable and does not tell if a package has been changed and the build hash cannot be used in version comparison. A different versioning method has to be suggested for SONiC packages.
+
+A version of a SONiC core packages is defined by a Dockerfile version, a makefile and a set of files included into the Docker image, a set of upstream packages and a set of SONiC packages. The proposed automatic versioning of docker images for core SONiC containers is the following:
+
+```
+${RELEASE_NUMBER}.${COMMIT_NUMBER}
+```
+
+Where, RELEASE_NUMBER is a sonic-buildimage branch and COMMIT_NUMBER is a number of commits in Docker image related rules, files, packages, sub-modules.
+
+The above proposed schema has the advantage of being easily automated by the build system and CI, the version is always unique and the version can be easily compared because it is always incrementing, e.g: 202006.156 < 202011.101, 202011.101 < 202011.105.
+
+The package can declare a dependency on a particular package:
+
+1. The dependent functionality in the dependent package in version 202006.156, any greater has this functionality and is compatible.
+2. The dependent functionality was added to 202006.156 but hasn't been added to 202011, the package has to declare that dependency in the following way: >= 202006.156 && < 202011.
+3. The dependent functionality has been reverted in 202006.158, the dependent package has to declare that it breaks the package. 
+
+For easier correlation with exact source version of sonic-buildimage used to build a core package a usual tag in the old format pointing to the same image will still be present in the system:
+
+```
+admin@sonic:~$ docker images | grep database
+docker-database   master.355-ee4197e9   63b010460d83        4 days ago          410MB
+docker-database   202006.156            63b010460d83        4 days ago          410MB
+```
+
+# 2.4 SONiC Package Manager Command Line Interface
+
+The SONiC Package Manager will be another executable utility available in base SONiC OS and called *sonic-package-manager-manager* or abbreviated to *spm*. The command line interfaces is given bellow:
 
 #### CLI
 
 ```
-admin@sonic:~$ sonic-extension
-Usage: sonic-extension [OPTIONS] COMMAND [ARGS]...
+admin@sonic:~$ sonic-package-manager-manager
+Usage: sonic-package-manager [OPTIONS] COMMAND [ARGS]...
 
-  CLI to manage SONiC application extensions
+  CLI to manage SONiC application packages
 
 Options:
   --help  Show this message and exit
 
 Commands:
   repository  List, add or remove SONiC application extensions repository list
-  install     Install SONiC extension from repository
-  upgrade     Upgrade SONiC extension
-  uninstall   Uninstall SONiC extension
+  list        List installed and built-in SONiC packages
+  install     Install SONiC package from repository
+  upgrade     Upgrade SONiC package
+  uninstall   Uninstall SONiC package
 ```
 
-#### List of repositories available
+#### List of packages available
 ```
-admin@sonic:~$ sonic-extension repository list
-Name         Repository         Description              Tag            Status
------------  ----------------   ------------------------ ------------   --------------
-cpu-report   Azure/cpu-report   CPU time report feature  1.0, 1.1       Installed (1.1)
-featureXXX   user/featureXXX    feature XXX description  v1-202006      Not installed
+admin@sonic:~$ sonic-package-manager list
+Name         Repository             Description              Tag            Status
+-----------  ---------------------  ------------------------ ------------   --------------
+database     Azure/sonic-database   SONiC database           202011.156     Built-In
+swss         docker-orchagent       Switch state service     202011.156     Built-In
+syncd        docker-syncd-vs        SONiC ASIC sync service  202011.156     Built-In
+teamd        docker-teamd           SONiC teaming service    202011.156     Built-In
+cpu-report   Azure/cpu-report       CPU time report feature  1.0, 1.1       Installed (1.1)
+featureXXX   user/featureXXX        feature XXX description  v1-202006      Not installed
 ```
 
 #### Repository management
 
 ```
-admin@sonic:~$ sudo sonic-extension repository add [NAME] [REPOSITORY] --description=[STRING] --tag=[STRING]
-admin@sonic:~$ sudo sonic-extension repository remove [NAME]
+admin@sonic:~$ sudo sonic-package-manager repository add [NAME] [REPOSITORY] --description=[STRING] --tag=[STRING]
+admin@sonic:~$ sudo sonic-package-manager repository remove [NAME]
 ```
 
-#### Extension Installation
+#### Package Installation
 
 ```
-admin@sonic:~$ sudo sonic-extension install cpu-report
+admin@sonic:~$ sudo sonic-package-manager install cpu-report
 ```
 
 Install a specific tag:
 ```
-admin@sonic:~$ sudo sonic-extension install cpu-report --tag=1.1
+admin@sonic:~$ sudo sonic-package-manager install cpu-report --tag=1.1
 ```
 
 An option "--tag" in CLI will allow user to install any version of extension. If tag is not listed in *repositories.json* for an extension the installation will warn the user:
 
 ```
-admin@sonic:~$ sudo sonic-extension install cpu-report --tag=latest
+admin@sonic:~$ sudo sonic-package-manager install cpu-report --tag=latest
 Tag "latest" is not in repositories.json. Proceed with installation [y/N]?:
 ```
 
@@ -373,25 +317,18 @@ It will be possible to install the extension from a Docker image file; convenien
 ```
 admin@sonic:~$ ls featureA.gz
 featureA.gz
-admin@sonic:~$ sudo sonic-extension install featureA.gz
+admin@sonic:~$ sudo sonic-package-manager install featureA.gz
 ```
 
 This option should mainly be used for debugging, developing purpose, while the preferred way will be to pull the image from repository.
 Repository list is not updated in this case, because it was a local installation.
 
-
 ```show version``` command can be used to display feature docker image version.
 
-#### Extension Upgrade
+#### Package Upgrade
 
-Pull latest compatible feature version:
 ```
-admin@sonic:~$ sudo sonic-extension upgrade featureA
-```
-
-Upgrade to specific tag:
-```
-admin@sonic:~$ sudo sonic-extension upgrade featureA --tag=latest
+admin@sonic:~$ sudo sonic-package-manager upgrade featureA --tag=202011.353
 ```
 
 Enable warm restart if feature supports and restart the service:
@@ -402,17 +339,18 @@ admin@sonic:~$ sudo systemctl restart featureA
 
 # 2.5 Manifest File
 
-Every SONiC application extension **must** provide a *manifest.json* file in image fs under */var/lib/sonic-extension/\<extension-name\>/manifest.json*.
+Every SONiC application extension **must** provide a *manifest.json* file in image fs under */var/lib/sonic-packages/\<package-name\>/manifest.json*.
 The following table describes schema for version 1.0:
 
 Path                        | Type                  | Description
 --------------------------- | --------------------- | ----------------------------------------------------------------------------------------
 /version                    | string                | Version of manifest file definition
-/name                       | string                | Application name
+/depends                    | list of strings       | The list of core services the service depends on in the format "[>|>=|==|<|<=]<package>:<tag>".
+/breaks                     | list of strings       | The list of core services the service depends on in the format "[>|>=|==|<|<=]<package>:<tag>".
 /service/                   | object                | Service related properties
 /service/requires           | list of strings       | List of SONiC services the application requires on cold start, restart, boot.
 /service/after              | list of strings       | List of SONiC core services the application is set to start after
-/service/before             | list of strings       | List of SONiC core services the application is set to start after.
+/service/before             | list of strings       | List of SONiC core services the application is set to start before
 /container/                 | object                | Container related properties
 /container/privileged       | boolean               | Run container in privileged mode
 /container/mounts           | list of strings       | List of mounts for container
@@ -441,25 +379,32 @@ By default */dev/log* and *rsyslogd* will be available for every SONiC Applicati
 
 Installed application should have a way to advertise its methods, capabilities, configuration schema to the rest of the system and the user. For this purpose YANG model is chosen as it is already in use in SONiC.
 
-SONiC Application Extension *can* provide a YANG module. This YANG module should describe CONFIG DB schema as well as methods provided by the application.
+SONiC Application Extension *can* provide a list of YANG modules. These YANG modules should describe CONFIG DB schema as well as methods provided by the application.
 
 YANG modules *must* be written according to [SONiC Yang Model Guidelines](https://github.com/Azure/SONiC/blob/master/doc/mgmt/SONiC_YANG_Model_Guidelines.md).
 
-Based on SONiC YANG model, a sonic-utilities extensions for *show*, *config*, *sonic-clear* utilities can be automatically generated. Taking the advantage of the YANG model and existing infrastructure provided by management framework to automatically generate code for REST API and gNMI interfaces.
+Based on SONiC YANG model, sonic-utilities extensions for *show*, *config*, *sonic-clear* utilities can be automatically generated. Taking the advantage of the YANG model and existing infrastructure provided by management framework to automatically generate code for REST API and gNMI interfaces.
 
 For some scenarios, a YANG model does not provide enough information for auto-generation tools. Custom SONiC extensions to YANG will provide hints for code generators.
 
 ###### Manifest file path 
 
 Path                        | Type                  | Description
---------------------------- | --------------------- | ----------------------------------------------------------------------------------------
-/yang-model                 | string                | Path to SONiC YANG model inside SAE image relatively to manifest file
+--------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------
+/yang-path                  | string                | Path to directory where SONiC YANG modules are located inside docker image relatively to manifest file
+
+###### Example
+
+```json
+{
+  "yang-path": "models/"
+}
+```
 
 # 2.9 Initial Extension Configuration
 
-SAE *can* provide an initial configuration it would like to start with after installation. The JSON file will be loaded into CONFIG DB during installation.
+SAE *can* provide an initial configuration it would like to start with after installation. The JSON file will be loaded into running CONFIG DB and boot CONFIG DB file during installation.
 
-*NOTE*: This will require to execute *config save* operation during extension installation.
 
 ###### Manifest file path 
 
@@ -499,15 +444,107 @@ for plugin in discovered_plugins.values():
 
 An auto-generated plugin will have a module level function *register_cli(cli)* that accepts the Click CLI object. SONiC utility application will call that method right after plugins discovery. A plugin will register it's sub-commands so that any utility will have a new sub-command group.
 
-### SONiC Application Extension Plugin Auto-generation
+### SONiC Utilities Plugin Auto-Generation
 
 Based on the YANG model the following rules will be used to generate a command tree:
 
-- For each command in SONiC utilities a new top level subcommand named after top level container in YANG module 
-- Each container in YANG is a subcommand in *show*, *config* utilities
-- In case when container contains leaf nodes, subcommands for *config* are autogenerated for each leaf. The *show* command to display all leafs in a table view will be autogenerated
-- In case when container has a list node, subcommands for *config* are autogenerated to *create*, *remove*, *update* subcommands. Mandatory leafs are positional arguments in *config* while not mandatory or leafs with default values are optional. In case of *show* command a subcommand to display configuration is autogenerated and the data is represented as a table
-- For RPC methods defined in YANG module a subcommands in either *sonic-clear* or *show* groups are generated, but not in *config* group. The RPC method *should* contain a metadata information to define in which command group it should exist. The RPC method also *should* contain an executable path which will be invoked with arguments defined in *input* statement.
+1. A new top level sub-command named after top level container in YANG module is added for "show" and "config" command groups.
+
+###### Example
+
+For a feature *featureX*
+```
+admin@sonic:~$ show featureX
+admin@sonic:~$ config featureX
+```
+
+2. Each container in YANG is a sub-command in *show*, *config* utilities
+
+###### Example
+
+```yang
+container global {
+  description "Global feature configuration";
+  // ...
+}
+```
+
+```
+admin@sonic:~$ show featureX global
+admin@sonic:~$ config featureX global
+```
+
+3. In case when container contains leaf nodes, sub-commands for *config* are auto-generated for each leaf. The *show* command to display all leafs in a table view will be auto-generated
+
+###### Example
+
+```yang
+container global {
+  description "Global feature configuration";
+
+  // DB schema
+  sonic-ext:table-name “FEATURE_X”;
+  sonic-ext:key-name “global”;
+
+  // ...
+  leaf polling-interval {
+    // DB schema
+    sonic-ext:field-name “polling_interval”;
+    // ...
+  }
+  leaf threshold {
+    // DB schema
+    sonic-ext:field-name “threshold”;
+    // ...
+  }
+}
+```
+
+```
+admin@sonic:~$ show featureX global
+Field              Value
+-----------------  ---------------
+polling-interval   5
+threshold          80
+admin@sonic:~$ config featureX global polling-interval 5
+```
+
+
+4. In case when container has a list node, sub-commands for *config* are auto-generated to *add*, *delete*, *update* sub-commands. Mandatory leafs are positional arguments in *config* while not mandatory or leafs with default values are optional. In case of *show* command a sub-command to display configuration is auto-generated and the data is represented as a table.
+
+```yang
+container objects {
+  // ...
+  list object-list {
+    key name;
+    leaf attribute-one {
+      // ...
+      mandatory true;
+      type uint16 {
+        range "1..4095" {
+          error-message "Out of range";
+        }
+      }
+    }
+    leaf attribute-two {
+      // ...
+      default 5;
+    }
+  }
+  // ...
+}
+```
+
+```
+admin@sonic:~$ show featureX objects
+Name     attribute-one   attribute-two
+-------  --------------  --------------
+object1  10              5
+object2  1000            10
+admin@sonic:~$ sudo config featureX objects add <name> <attribute-one> [--attribute-two=INT]
+```
+
+5. For RPC methods defined in YANG module a sub-commands in either *sonic-clear* or *show* groups are generated, but not in *config* group. The RPC method *should* contain a metadata information to define in which command group it should exist. The RPC method also *should* contain an executable path which will be invoked with arguments defined in *input* statement.
 
 
 Two new SONiC YANG extensions will be added:
@@ -517,7 +554,7 @@ Extension                  | Value                      | Description
 sonic-ext:op               | enum (show/clear)          | An extension for RPC method to define in which command group it should exist
 sonic-ext:exec             | string                     | A path of an executable inside application container to invoke for this RPC
 
-###### Usage
+###### Example
 
 ```yang
 rpc stats {
@@ -540,6 +577,25 @@ rpc stats {
 admin@sonic:~$ show featureXXX stats
 ```
 
+6. Extending external commands using ```augment``` statement.
+
+###### Example
+
+```yang
+container dhcp-relay {
+  augment /sonic:sonic-vlan/VLAN/VLAN_LIST;
+  leaf-list dhcp-servers {
+    type inet:ip-address;
+  }
+}
+```
+
+***NOTE***: VLAN feature in this case is provided by swss container, swss container has to provide sonic-vlan.yang and VLAN CLI has to be auto-generated from that YANG module.
+
+```
+admin@sonic:~$ sudo config vlan update Vlan1000 dhcp-servers add 192.168.100.100
+```
+
 ## 2.10.2 SONiC Management Framework Integration
 
 SONiC Management Framework provides a northbound API like REST API and also a CISCO-like CLI based on open-source project Klish.
@@ -560,7 +616,7 @@ SAE infrastructure should take care of generating a code that will auto register
 
 SAE REST server extension process *must* listen on Unix socket for request. Since, it is not guarantied that SAE will run in the same network namespace as *mgmt-framework*, binding to localhost is not an option.
 
-SAE infrastructure will map the base path of the socket path specified in the manifest to host path */var/run/sonic-extension/\<extension-name\>/\<socket-file\>.sock*. The base folder of */var/run/sonic-extension/* is mapped to *mgmt-framework* container by default, so that *mgmt-framework* is able to perform requests to the rest extension process running inside SAE container.
+SAE infrastructure will map the base path of the socket path specified in the manifest to host path */var/run/sonic-packages/\<extension-name\>/\<socket-file\>.sock*. The base folder of */var/run/sonic-packages/* is mapped to *mgmt-framework* container by default, so that *mgmt-framework* is able to perform requests to the rest extension process running inside SAE container.
 
 ![](images/SAE_Rest_API_extension.svg "Figure 2.3 SONiC Application Extension For REST API")
 
@@ -581,7 +637,7 @@ STATE DB ABNF schema for REST_SERVICE_REGISTRY table.
 ;Defines REST_SERVICE_REGISTRY table in STATE DB
 key                 = REST_SERVICE_REGISTRY|1*ALPHA    ; Feature name
 route               = [1*ALPHA]+                       ; Comma separated route prefixes list
-path                = 1*ALPHA                          ; path relative to base path "/var/run/sonic-extension/"
+path                = 1*ALPHA                          ; path relative to base path "/var/run/sonic-packages/"
 ```
 
 ###### Manifest file path 
@@ -613,8 +669,8 @@ There is no point for auto-generation of XML as custom generation tools will onl
 SAE infrastructure database will be mapped to *mgmt-framework*, so that a directory containing XML files and Jinja2 templates become available for Klish. *CLISH_PATH* environment variable should be extended with those directories.
 
 SAE image must place Klish resources in the following structure:
-- XML Klish configuration files: */var/lib/sonic-extension/\<feature\>/klish/\*.xml*.
-- Jinja2 templates for renderer: */var/lib/sonic-extension/\<feature\>/klish/templates/\*.j2*.
+- XML Klish configuration files: */var/lib/sonic-packages/\<feature\>/klish/\*.xml*.
+- Jinja2 templates for renderer: */var/lib/sonic-packages/\<feature\>/klish/templates/\*.j2*.
 
 ###### Manifest file path 
 
@@ -638,12 +694,8 @@ STATE DB ABNF schema for TELEMETRY_SERVICE_REGISTRY table.
 ```
 ;Defines TELEMETRY_SERVICE_REGISTRY table in STATE DB
 key                 = TELEMETRY_SERVICE_REGISTRY|1*ALPHA ; Feature name
-APPL_DB             = [1*ALPHA]+                       ; Comma separated prefixes list of xpath for gNMI for xpath_target APPL_DB
-CONFIG_DB           = [1*ALPHA]+                       ; Comma separated prefixes list of xpath for gNMI for xpath_target CONFIG_DB
-COUNTERS_DB         = [1*ALPHA]+                       ; Comma separated prefixes list of xpath for gNMI for xpath_target COUNTERS_DB
-STATE_DB            = [1*ALPHA]+                       ; Comma separated prefixes list of xpath for gNMI for xpath_target STATE_DB
-OTHERS              = [1*ALPHA]+                       ; Comma separated prefixes list of xpath for gNMI for xpath_target OTHERS
-path                = 1*ALPHA                          ; path relative to base path "/var/run/sonic-extension/"
+TARGET              = [1*ALPHA]+                       ; Comma separated prefixes list of xpath for gNMI for xpath_target TARGET
+path                = 1*ALPHA                          ; path relative to base path "/var/run/sonic-packages/"
 ```
 
 ###### Manifest file path 
@@ -685,8 +737,6 @@ SONiC controls optional feature (aka services) via FEATURE table in CONFIG DB.
 Once SONiC Application Extension is installed in the system it must be treated in the same way as any optional SONiC feature.
 
 SAE Infrastructure *must* register new feature in CONFIG DB.
-
-*NOTE*: This will require to execute *config save* operation during extension installation.
 
 [Optional Feature HLD Reference](https://github.com/Azure/SONiC/blob/master/doc/Optional-Feature-Control.md)
 
@@ -823,7 +873,6 @@ A list of packages will be extended on demand when a common package is required 
 If a package is required but is specific to the SONiC application extension it should not be added to this list.
 
 Developer of SONiC application extension can use those docker images to build his extension.
-It would be highly encouraged to leverage docker multi-staged build feature in this case:
 
 ```Dockerfile
 
@@ -837,15 +886,13 @@ FROM sonic-sdk:202006.1-583bfde4 as run-env
 COPY --from=build-env ["feature_1.0.0_amd64.deb", "/"]
 
 # Installing packages
-
-LABEL tag=2.1.0-af12ae64
 ```
 
 # 3. SONiC Application Extension Example
 
 The example is given for an application that monitors CPU time for select processes and reports the statistics to the remote collectors.
 
-*/var/lib/sonic-extension/cpu-report/manifest.json*:
+*/var/lib/sonic-packages/cpu-report/manifest.json*:
 ```json
 {
   "version": "1.0",
@@ -882,7 +929,7 @@ The example is given for an application that monitors CPU time for select proces
 }
 ```
 
-*/var/lib/sonic-extension/cpu-report/sonic-cpu-report.yang*:
+*/var/lib/sonic-packages/cpu-report/sonic-cpu-report.yang*:
 ```yang
 module sonic-cpu-report {
     yang-version 1.1;
@@ -995,8 +1042,9 @@ module sonic-cpu-report {
         rpc clear-stats {
             description "Clear counter statistics";
 
-            sonic-utilities:group clear;
-            sonic-utilities:binary "cpu-report:/usr/bin/clear-stats";
+            sonic-ext:group clear;
+            sonic-ext:command stats;
+            sonic-ext:binary "cpu-report:/usr/bin/clear-stats";
 
             input {
                 leaf counter {
@@ -1010,8 +1058,8 @@ module sonic-cpu-report {
         rpc stats {
             description "Retrieve counter statistics";
 
-            sonic-utilities:group show;
-            sonic-utilities:binary "cpu-report:/usr/bin/stats";
+            sonic-ext:group show;
+            sonic-ext:binary "cpu-report:/usr/bin/stats";
 
             input {
                 leaf counter {
@@ -1031,7 +1079,7 @@ module sonic-cpu-report {
 }
 ```
 
-*/var/lib/sonic-extension/cpu-report/init-cfg.json*:
+*/var/lib/sonic-packages/cpu-report/init-cfg.json*:
 
 ```json
 {
