@@ -359,7 +359,7 @@ A required "version" field can be used in case the format of manifest.json is ch
 
 Service properties "requires" and "after", "before" are related to service management, it maps to systemd unit attributes and can be extended in the future on demand if needed.
 
-Service file will be auto-generated from generic */usr/share/sonic/templates/service.j2* file; "swss" service in "requires" is a special case. Instead of putting swss.service into ```Requires=``` fields in feature systemd service file, the dependency has to be handled inside */usr/local/bin/swss.sh* script in order to not break swss warm restart. The list of dependent services is now dynamic so should be updated by SONiC Application Extension Infrastructure. The list of dependent services will be stored at */etc/swss-dependent-services.json*.
+Service file will be auto-generated from generic */usr/share/sonic/templates/service.j2* file; The infrastructure should take care of handling warm/cold restart scenarios following the example for swss service.
 
 Container options are mapped to ```docker create``` options. This dictionary is used to auto-generate service start/stop script from *docker_image_ctl.j2* file. It is required to have this file as part of SONiC image and put it in */usr/share/sonic/templates/docker_image_ctl.j2*.
 
