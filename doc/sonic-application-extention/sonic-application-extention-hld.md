@@ -215,8 +215,8 @@ An example of a content in JSON format:
   "featureXXX": {
     "repository": "user/featureXXX",
     "description": "feature XXX description",
-    "tags": ["v1-202006"],
-    "default_tag": "v1-202006"
+    "tags": ["1.0.0"],
+    "default_tag": "1.0.0"
   }
 }
 ```
@@ -284,7 +284,7 @@ swss         docker-orchagent       Switch state service     202011.156     Buil
 syncd        docker-syncd-vs        SONiC ASIC sync service  202011.156     Built-In
 teamd        docker-teamd           SONiC teaming service    202011.156     Built-In
 cpu-report   Azure/cpu-report       CPU time report feature  1.0, 1.1       Installed (1.1)
-featureXXX   user/featureXXX        feature XXX description  v1-202006      Not installed
+featureXXX   user/featureXXX        feature XXX description  1.0.1          Not installed
 ```
 
 #### Repository management
