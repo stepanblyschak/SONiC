@@ -345,8 +345,8 @@ The following table describes schema for version 1.0:
 Path                        | Type                  | Description
 --------------------------- | --------------------- | ----------------------------------------------------------------------------------------
 /version                    | string                | Version of manifest file definition
-/depends                    | list of strings       | The list of core services the service depends on in the format "[>|>=|==|<|<=]<package>:<tag>".
-/breaks                     | list of strings       | The list of core services the service depends on in the format "[>|>=|==|<|<=]<package>:<tag>".
+/depends                    | list of strings       | The list of core services the service depends on in the format [>\|>=\|==\|<\|<=]<package>:<tag>.
+/breaks                     | list of strings       | The list of core services the service depends on in the format [>\|>=\|==\|<\|<=]<package>:<tag>.
 /service/                   | object                | Service related properties
 /service/requires           | list of strings       | List of SONiC services the application requires on cold start, restart, boot.
 /service/after              | list of strings       | List of SONiC core services the application is set to start after
