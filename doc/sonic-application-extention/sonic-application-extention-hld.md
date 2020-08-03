@@ -202,7 +202,7 @@ An example of a content in JSON format:
     "essential": true
   },
   "swss": {
-    "image": "docker-orchagent",
+    "repository": "docker-orchagent",
     "description": "SONiC switch state service",
     "essential": true
   },
