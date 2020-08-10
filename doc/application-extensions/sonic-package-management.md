@@ -304,7 +304,7 @@ Path                             | Type                  | Description
 /processes/name                  | string                | Process name
 /processes/name/critical         | boolean               | Wether the process is a critical process
 /processes/name/command          | string                | Command to run the process
-/processes/name/start-depends    | string                | Format of "<process-name>:<state>"        
+/processes/name/start-depends    | string                | Format of "\<process-name\>:\<state\>"        
 /processes/name/reconciles       | boolean               | Wether process performs warm-boot reconciliation
 /init-cfg                        | string                | Path to SONiC Extension Initial Configuration JSON file relatively to manifest file
 /warm-shutdown-stage             | string                | A service the package is bound in warm shutdown; either *swss* or *syncd*
