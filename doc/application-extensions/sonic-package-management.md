@@ -82,6 +82,8 @@ When the SONiC application extension infrastructure will become a part of SONiC,
 
 The first step into building such a system is a package management system for SONiC.
 
+The main goal is to achive a single command installation/deinstallation of a package and provide the neccessary infrastructure for converting dhcp relay docker into a SONiC package.
+
 # 1.3 Requirements
 
 ## Functional requirements
@@ -302,7 +304,6 @@ Path                             | Type                  | Description
 /processes/name                  | string                | Process name
 /processes/name/critical         | boolean               | Wether the process is a critical process
 /processes/name/command          | string                | Command to run the process
-/processes/name/autostart        | boolean               | Autostart by supervisord
 /processes/name/start-depends    | string                | Format of "<process-name>:<state>"        
 /processes/name/reconciles       | boolean               | Wether process performs warm-boot reconciliation
 /init-cfg                        | string                | Path to SONiC Extension Initial Configuration JSON file relatively to manifest file
