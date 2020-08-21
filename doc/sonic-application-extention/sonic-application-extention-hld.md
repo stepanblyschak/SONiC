@@ -313,35 +313,38 @@ admin@sonic:~$ sudo systemctl restart featureA
 Every SONiC Package that is not an essential package must provide a *manifest.json* file in image filesystem under */var/lib/sonic-packages/\<package-name\>/manifest.json*.
 The following table describes schema for version 1.0:
 
-Path                             | Type                  | Description
--------------------------------- | --------------------- | ----------------------------------------------------------------------------------------
-/version                         | string                | Version of manifest file definition.
-/depends                         | list of strings       | The list of core services the service depends on in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```>swss:1.4.1```.
-/breaks                          | list of strings       | The list of core services the service depends on in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```<=featureX:1.1.0```.
-/conflicts                       | list of strings       | The list of core services the service conflicts with in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```<=featureY:1.1.0```.
-/service/                        | object                | Service related properties.
-/service/requires                | list of strings       | List of SONiC services the application requires on cold start, restart, boot.
-/service/after                   | list of strings       | List of SONiC core services the application is set to start after.
-/service/before                  | list of strings       | List of SONiC core services the application is set to start before.
-/container/                      | object                | Container related properties.
-/container/privileged            | string                | Start the container in privileged mode.
-/container/mounts                | list of strings       | List of mounts for a container.
-/processes/                      | list                  | A list defining processes running inside the container.
-/processes/name                  | string                | Process name.
-/processes/name/critical         | boolean               | Wether the process is a critical process.
-/processes/name/autostart        | boolean               | Autostart by supervisord
-/processes/name/command          | string                | Command to run the process.
-/processes/name/start-depends    | string                | Format of "\<process-name\>:\<state\>".
-/processes/name/reconciles       | boolean               | Wether process performs warm-boot reconciliation, the warmboot-finalizer service has to wait for.
-/init-cfg                        | string                | Path to SONiC Application Extension Package initial configuration JSON file relatively to manifest file.
-/post-start-action               | string                | Path to an executable inside Docker image filesystem to be executed after container start.
-/warm-fast-shutdown-stage        | string                | A service the package is bound in warm and fast shutdown; either *swss* or *syncd*.
-/debug-dump                      | string                | A command to be executed during system dump.
-/host-namespace                  | boolean               | Multi-ASIC field. Wether a service should run in host namespace.
-/per-namespace                   | boolean               | Multi-ASIC field. Wether a service should run per ASIC namespace.
-/show-cli-plugin                 | string                | A path to a plugin for sonic-utilities show CLI command.
-/config-cli-plugin               | string                | A path to a plugin for sonic-utilities config CLI command.
-/clear-cli-plugin                | string                | A path to a plugin for sonic-utilities sonic-clear CLI command.
+Path                              | Type                  | Description
+--------------------------------- | --------------------- | ----------------------------------------------------------------------------------------
+/version                          | string                | Version of manifest file definition.
+/package                          | object                | Package related infromation
+/package/depends                  | list of strings       | The list of core services the service depends on in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```>swss:1.4.1```.
+/package/breaks                   | list of strings       | The list of core services the service depends on in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```<=featureX:1.1.0```.
+/package/conflicts                | list of strings       | The list of core services the service conflicts with in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```<=featureY:1.1.0```.
+/package/init-cfg                 | string                | Path to SONiC Application Extension Package initial configuration JSON file relatively to manifest file.
+/package/debug-dump               | string                | A command to be executed during system dump.
+/service/                         | object                | Service related properties.
+/service/requires                 | list of strings       | List of SONiC services the application requires on cold start, restart, boot.
+/service/after                    | list of strings       | List of SONiC core services the application is set to start after.
+/service/before                   | list of strings       | List of SONiC core services the application is set to start before.
+/service/post-start-action        | string                | Path to an executable inside Docker image filesystem to be executed after container start.
+/service/warm-shutdown-stage      | string                | A service the package is bound in warm shutdown; either *swss* or *syncd*.
+/service/fast-shutdown-stage      | string                | A service the package is bound in fast shutdown; either *swss* or *syncd*.
+/service/host-namespace           | boolean               | Multi-ASIC field. Wether a service should run in host namespace.
+/service/asic-namespace           | boolean               | Multi-ASIC field. Wether a service should run per ASIC namespace.
+/container/                       | object                | Container related properties.
+/container/privileged             | string                | Start the container in privileged mode.
+/container/mounts                 | list of strings       | List of mounts for a container.
+/processes/                       | list                  | A list defining processes running inside the container.
+/processes/name                   | string                | Process name.
+/processes/name/critical          | boolean               | Wether the process is a critical process.
+/processes/name/autostart         | boolean               | Autostart by supervisord
+/processes/name/command           | string                | Command to run the process.
+/processes/name/start-depends     | string                | Format of "\<process-name\>:\<state\>".
+/processes/name/reconciles        | boolean               | Wether process performs warm-boot reconciliation, the warmboot-finalizer service has to wait for.
+/cli                              | object                | CLI plugin infromation
+/cli/show-cli-plugin              | string                | A path to a plugin for sonic-utilities show CLI command.
+/cli/config-cli-plugin            | string                | A path to a plugin for sonic-utilities config CLI command.
+/cli/clear-cli-plugin             | string                | A path to a plugin for sonic-utilities sonic-clear CLI command.
 
 A required "version" field can be used in case the format of manifest.json is changed in the future. In this case a migration script can be applied to convert format to the recent version. This is similar to approach SONiC uses for CONFIG DB version.
 
@@ -383,13 +386,13 @@ Every service that the starting service requires should be started as well and s
 
 # 2.9 Initial Extension Configuration
 
-SONiC Package *can* provide an the initial configuration it would like to start with after installation. The JSON file will be loaded into running CONFIG DB and boot CONFIG DB file during installation.
+SONiC Package can provide an the initial configuration it would like to start with after installation. The JSON file will be loaded into running CONFIG DB and boot CONFIG DB file during installation.
 
-###### Manifest file path 
+###### Manifest file path
 
 Path                        | Type                  | Description
 --------------------------- | --------------------- | ----------------------------------------------------------------------------------------
-/init-cfg                   | string                | Path to SONiC Extension Initial Configuration JSON file relatively to manifest file
+/package/init-cfg           | string                | Path to SONiC Extension Initial Configuration JSON file relatively to manifest file
 
 # 2.9 CLI extension
 
@@ -410,21 +413,57 @@ discovered_plugins = {
     for finder, name, ispkg
     in iter_namespace(show.plugins)
 }
-
-for plugin in discovered_plugins.values():
-    plugin.register_cli(cli)
 ```
-The plugin will have a module level function *register_cli(cli)* that accepts the Click CLI object. SONiC utility application will call that method right after plugins discovery. A plugin will register it's sub-commands so that any utility will have a new sub-command group.
 
+A plugin will register it's sub-commands so that any utility will have a new sub-command group.
 The SONiC package *can* provide a CLI plugin that will be installed into the right location during package installation and then discovered and loaded by CLI. Later, once YANG CLI auto-generation tool is ready, the plugin will be auto-generated and all command conflicts will be simply checked in advance during installation.
+
+In this approach it is easy to extend CLI with new commands, but in order to extend a command which is already implemented in sonic-utilities the code in sonic-utilities base has to be implemented in an extendeble manner.
+
+###### Example
+
+For dhcp-relay feature, it is needed to extend the CLI with a new subcommand for vlan, which is easilly implemented by declaring a new subcommand:
+
+*show/plugins/dhcp_relay.py*:
+```python
+from show.vlan import vlan
+
+@vlan.command()
+def dhcp_relay():
+    pass
+```
+
+Extending an existing command like "show vlan brief" will require to rewrite it in an extandable way:
+
+*show/vlan.py*:
+```python
+class VlanBrief:
+    COLUMNS = [
+        ("VLAN ID", get_vlan_id),
+        ("IP address", get_vlan_ip_address),
+        ("Ports", get_vlan_ports),
+        ("Port Tagging", get_vlan_ports_tagging)
+    ]
+```
+
+*show/plugins/dhcp_relay.py
+```python
+
+def get_vlan_dhcp_relays(vlan):
+    pass
+
+VlanBrief.COLUMNS.append(("DHCP Helper Address", get_vlan_dhcp_relays))
+```
+
+NOTE: In this approach or in approach with autogenerated CLI an output of the command may change when a package is installed, e.g. DHCP Helper Address may or may not be present in CLI depending on installed package. Thus all automation, testing tools have to be also autogenerated from YANG in the future.
 
 ###### Manifest file path
 
 Path                             | Type                  | Description
 -------------------------------- | --------------------- | ----------------------------------------------------------------------------------------
-/show-cli-plugin                 | string                | A path to a plugin for sonic-utilities show CLI command
-/config-cli-plugin               | string                | A path to a plugin for sonic-utilities config CLI command
-/clear-cli-plugin                | string                | A path to a plugin for sonic-utilities sonic-clear CLI command
+/cli/show-cli-plugin             | string                | A path to a plugin for sonic-utilities show CLI command
+/cli/config-cli-plugin           | string                | A path to a plugin for sonic-utilities config CLI command
+/cli/clear-cli-plugin            | string                | A path to a plugin for sonic-utilities sonic-clear CLI command
 
 # 2.10 Processes and entry point
 
@@ -443,7 +482,7 @@ Path                             | Value                 | Description
 /processes/name/critical         | boolean               | Wether the process is a critical process
 /processes/name/command          | string                | Command to run the process
 /processes/name/autostart        | boolean               | Autostart by supervisord
-/processes/name/start-depends    | string                | Format of "<process-name>:<state>"        
+/processes/name/start-depends    | string                | Format of "<process-name>:<state>"
 /processes/name/reconciles       | boolean               | Wether process performs warm-boot reconciliation
 
 A *supervisord.conf* file is auto-generated based on above data. *rsyslogd*, *supervisord-dependent-startup* and *supervisord-proc-exit-listener* processes are configured by default. SONiC Package should not list them in the processes list.
@@ -486,9 +525,9 @@ SONiC Package *can* specify a stage at which the package needs to be shutdown at
 
 ###### Manifest file path
 
-Path                   | Value             | Description
------------------------|-------------------|---------------------------------------------------------------------------------
-/warm-shutdown-stage   | string            | A service the extension is bound in warm shutdown; either *swss* or *syncd*
+Path                           | Value             | Description
+-------------------------------|-------------------|---------------------------------------------------------------------------------
+/service/warm-shutdown-stage   | string            | A service the extension is bound in warm shutdown; either *swss* or *syncd*
 
 # 2.16 System Dump
 
@@ -496,9 +535,9 @@ SONiC Package *can* specify a command to execute inside container to get the deb
 
 ###### Manifest file path
 
-Path                   | Value             | Description
------------------------|-------------------|---------------------------------------------------------------------------------
-/debug-dump            | string            | A command to be executed during system dump
+Path                           | Value             | Description
+-------------------------------|-------------------|---------------------------------------------------------------------------------
+/package/debug-dump            | string            | A command to be executed during system dump
 
 # 2.17 SONiC-2-SONiC upgrade
 
@@ -530,8 +569,8 @@ Based on current Multi-ASIC design, a service might be a host namespace service,
 
 Path                             | Value                 | Description
 ---------------------------------|-----------------------|---------------------------------------------------------------------------------
-/host-namespace                  | boolean               | Multi-ASIC field. Wether a service should run in host namespace.
-/per-namespace                   | boolean               | Multi-ASIC field. Wether a service should run per ASIC namespace.
+/service/host-namespace          | boolean               | Multi-ASIC field. Wether a service should run in host namespace.
+/service/asic-namespace          | boolean               | Multi-ASIC field. Wether a service should run per ASIC namespace.
 
 # 2.19 SONiC Build System
 
