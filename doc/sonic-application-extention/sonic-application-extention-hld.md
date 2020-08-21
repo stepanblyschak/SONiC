@@ -113,6 +113,8 @@ SONiC Application Extension Infrastructure requires changes on all SONiC layers.
 Phase 1:
 - SONiC package management system
 - Integration with systemd, *feature* concept
+- Process and Docker statistics telemetry
+- Partial telemetry support via STATE DB
 - Cold/Fast/Warm/Reload/SONiC-2-SONiC flows
 - Simple sonic-utilities CLI integration
 
@@ -489,11 +491,17 @@ A *supervisord.conf* file is auto-generated based on above data. *rsyslogd*, *su
 
 The *reconciles* flag indicates wether a process performs warm boot reconciliation. In case it is a list of processes to wait for should be extended in *finalize-warmboot.sh*. The list of processes that has to be waited for reconciliation is taken from SONiC Package Library API.
 
-# 2.11 Monit Configuration
+# 2.11 SONiC Processes and Docker Statistics Telemetry Support
+
+[Processes And Docker Stats Telemetry HLD](https://github.com/Azure/SONiC/blob/master/doc/system-telemetry/process-docker-stats.md)
+
+This feature should be supported by SONiC Application Extension without any changes to existing feature implementation.
+
+# 2.12 Monit Configuration
 
 Processes information is also used to generate monit configuration file based on the *critical* flag.
 
-# 2.12 Feature Concept Integration
+# 2.13 Feature Concept Integration
 
 SONiC controls optional feature (aka services) via FEATURE table in CONFIG DB. Once SONiC Package is installed in the system and it is not marked as essential it must be treated in the same way as any optional SONiC feature. The SONiC package installation process will register new feature in CONFIG DB.
 
@@ -507,11 +515,11 @@ admin@sonic:~$ sudo config feature featureA enabled
 
 SONiC Package will automatically support *CONTAINER_FEATURE* configuration, like auto-restart on failure or high memory usage.
 
-# 2.13 Multi-DB support
+# 2.14 Multi-DB support
 
 Application should be using swss-common library or swsssdk which take care of discovering database instances.
 
-# 2.14 Configuration Reload
+# 2.15 Configuration Reload
 
 SONiC Packages should restart on initiated *config reload* commands.
 
@@ -519,7 +527,7 @@ Service management and services dependencies management in SONiC is complex. *co
 
 A service is restarted in this case if its dependency is restarted (like swss) or it is restarted explicitly. *config reload* will use SONiC Package library API to get the list of services needed to be restarted. If a package core SONiC service dependency is already in a list of restarting a services it will skip explicit restart.
 
-# 2.15 Warm/Fast restart
+# 2.16 Warm/Fast restart
 
 SONiC Package *can* specify a stage at which the package needs to be shutdown at warm/fast reboot in manifest file. Some packages might require to be stopped at the last moment before CPU port becomes unavailable (e.g. teamd). Two possible shutdown stages are defined - *swss* and *syncd*. If a SONiC package specifies *swss* the package will shutdown before swss service goes down, if it specifies *syncd* the extension will be shut down before *syncd* service goes down. If neither is specified the extension will be shutdown right before *kexec*.
 
@@ -529,7 +537,7 @@ Path                           | Value             | Description
 -------------------------------|-------------------|---------------------------------------------------------------------------------
 /service/warm-shutdown-stage   | string            | A service the extension is bound in warm shutdown; either *swss* or *syncd*
 
-# 2.16 System Dump
+# 2.17 System Dump
 
 SONiC Package *can* specify a command to execute inside container to get the debug dump that should be included in system dump file. This command should be specified in manifest file. A command should write its debug dump to stdout which will be gzip-ed into a file during *show techsupport* execution. This file will be included in techsupport under *dump/\<extension-name\>/dump.gz*.
 
@@ -539,7 +547,7 @@ Path                           | Value             | Description
 -------------------------------|-------------------|---------------------------------------------------------------------------------
 /package/debug-dump            | string            | A command to be executed during system dump
 
-# 2.17 SONiC-2-SONiC upgrade
+# 2.18 SONiC-2-SONiC upgrade
 
 SONiC-2-SONiC upgrade shall work for SONiC packages as well. An upgrade will take the new system *packages.json* and version requirements.
 
@@ -553,7 +561,7 @@ admin@sonic:~$ sudo sonic-package-migration [OLD_SONIC_PACKAGES_JSON_FILE]
 3. Locally installed packages from tarball are not considered during SONiC-2-SONiC upgrade.
 4. Manually added packages are added to the new SONiC image *package.json*.
 
-CONFIG DB is not updated with initial config of the package and a new feature in the FEATURE table in this scenario. The *sonic-package-manager* utility will detect that it is running in chroot environment and skip this part. CONFIG DB is migrated from an old image to a new one. A package should keep it's configuration backward compatible with old version, unless a package performs DB migration as part of container initialization. After installation succeeded and reboot into new image is performed all previously installed extensions should be available.
+CONFIG DB is not updated with initial config of the package and a new feature in the FEATURE table in this scenario. A package should keep it's configuration backward compatible with old version. After installation succeeded and reboot into new image is performed all previously installed extensions should be available.
 
 An option to skip migrating packages will be added for users that want to have a clean SONiC installation:
 
@@ -561,7 +569,7 @@ An option to skip migrating packages will be added for users that want to have a
 admin@sonic:~$ sudo sonic-installer install -y sonic-$Platform.bin --no-package-migration
 ```
 
-# 2.18 Multi-ASIC
+# 2.19 Multi-ASIC
 
 Based on current Multi-ASIC design, a service might be a host namespace service, like telemetry, SNMP, etc., or replicated per each ASIC namespace, like teamd, bgp, etc., or running in all host and ASICs namespaces, like lldp. Based on */host-namespace* and */per-namespace* fields in manifest file, corresponding service files are created.
 
@@ -572,7 +580,7 @@ Path                             | Value                 | Description
 /service/host-namespace          | boolean               | Multi-ASIC field. Wether a service should run in host namespace.
 /service/asic-namespace          | boolean               | Multi-ASIC field. Wether a service should run per ASIC namespace.
 
-# 2.19 SONiC Build System
+# 2.20 SONiC Build System
 
 SONiC build system will provide three docker images to be used as a base to build SONiC application extensions - *sonic-sdk-buildenv*, *sonic-sdk* and *sonic-sdk-dbg*.
 
