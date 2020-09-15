@@ -321,7 +321,6 @@ Path                              | Type                  | Description
 /package                          | object                | Package related infromation
 /package/depends                  | list of strings       | The list of core services the service depends on in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```>swss:1.4.1```.
 /package/breaks                   | list of strings       | The list of core services the service depends on in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```<=featureX:1.1.0```.
-/package/conflicts                | list of strings       | The list of core services the service conflicts with in the format [>\|>=\|==\|<\|<=]\<package\>:\<tag\>. E.g. ```<=featureY:1.1.0```.
 /package/init-cfg                 | string                | Path to SONiC Application Extension Package initial configuration JSON file relatively to manifest file.
 /package/debug-dump               | string                | A command to be executed during system dump.
 /service/                         | object                | Service related properties.
@@ -352,7 +351,7 @@ A required "version" field can be used in case the format of manifest.json is ch
 
 # 2.6 Installation Dependencies
 
-An installation process performs a set of checks based on the manifest file. If a package listed in */depends* is not installed or it does not match the required version condition the installation fails. Same way, if a package is installed and it matches a condition in */breaks* or */conflicts* section of the manifest file of the package that is about to be installed the user will get an error.
+An installation process performs a set of checks based on the manifest file. If a package listed in */depends* is not installed or it does not match the required version condition the installation fails. Same way, if a package is installed and it matches a condition in */breaks* section of the manifest file of the package that is about to be installed the user will get an error.
 
 # 2.7 Service File
 
