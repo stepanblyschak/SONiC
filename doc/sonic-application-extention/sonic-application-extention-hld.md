@@ -361,6 +361,7 @@ Path                              | Type                  | Description
 /package/sonic-version            | string                | SONiC base image version dependency in the format [>\|>=\|==\|<\|<=]\<version\>. E.g. "\>=1.1.0".
 /package/init-config              | string                | Path to SONiC Application Extension Package initial configuration JSON file relatively to manifest file.<p>This configuration will be appendend to running and boot configuration during installation.
 /package/debug-dump               | string                | A command to be executed during system dump.<p>This field tells the system what to do if user requests "show techsupport" information.
+/service/name                     | string                | Name of the service. There could be two packages e.g: fpm-quagga, fpm-frr but the service name is the same "bgp". For such cases each one have to declare the other service in "breaks".
 /service/                         | object                | Service management related properties.
 /service/requires                 | list of strings       | List of SONiC services the application requires.<p>The option maps to systemd's unit "Requires=".
 /service/requisite                | list of strings       | List of SONiC services that are requisite for this package.<p>The option maps to systemd's unit "Requisite=".
@@ -418,6 +419,14 @@ those are managed not by systemd but in the container management script itself.
 
 # 2.8 Container management script
 
+###### Service start/stop
+```
+systemctl start <service> -> /usr/local/bin/<service>.sh start -> /usr/bin/<service>.sh start
+                          -> /usr/local/bin/<service>.sh wait -> /usr/bin/<service>.sh wait
+
+systemctl stop <service> -> /usr/local/bin/<service>.sh stop -> /usr/bin/<service>.sh stop
+```
+
 SONiC uses shell script to manage Docker container. The shell script is auto-generated during build time from *files/build_templates/docker_image_ctl.j2*.
 To allow a runtime package installation, it is required to have this file as part of SONiC image and put it in */usr/share/sonic/templates/docker_image_ctl.j2*.
 The Jinja2 template will accept three arguments, docker_container_name, *docker_image_name* and *docker_run_options*, which derive from the */container/* node from manifest file.
@@ -443,6 +452,9 @@ Other options in *docker_run_options* are specific to a package.
 
 The *preStartAction* and *postStartAction* container specific actions should be moved to the container itself to make the template generic.
 A data node */post-start-action* in manifest file is used to generate a *postStartAction* function.
+
+Some Docker containers have a warpper around docker_image_clt.j2 under /usr/local/bin/. In that script all dependent services are managed with regard to warm reboot.
+For all SONiC packages such a script should also be auto-generated from a *service-mgmt.sh.j2* template according to manifest.
 
 Every service that the starting service requires should be started as well and stopped when a service is stopped but only if a service is doing a cold start.
 This means when a new package is installed it might affect the other scripts.
@@ -603,9 +615,10 @@ The warm-reboot and fast-reboot scripts have to be auto-generated from a templat
 
 A services shutdown is an ordered executions of *systemctl stop {{ service }}* commands with an exception for "swss" service after which a syncd pre-shutdown is requested and database backup is prepared for next boot. A service specific actions that are executed on warm-shutdown are hidden inside the service stop script action.
 
-###### warm-reboot.j2
+###### warm-reboot.j2 snippet
 
 ```jinja2
+...
 {% for service in shutdown_orider %}
 systemctl stop {{ service }}
 {% if service == 'swss' %}
@@ -614,6 +627,7 @@ systemctl stop {{ service }}
 ...
 {% endif %}
 {% endfor %}
+...
 ```
 
 ###### Manifest file path
@@ -664,7 +678,7 @@ admin@sonic:~$ sudo sonic-installer install -y sonic-$Platform.bin --no-package-
 
 # 2.19 Multi-ASIC
 
-Based on current Multi-ASIC design, a service might be a host namespace service, like telemetry, SNMP, etc., or replicated per each ASIC namespace, like teamd, bgp, etc., or running in all host and ASICs namespaces, like lldp. Based on */host-namespace* and */per-namespace* fields in manifest file, corresponding service files are created per each namespace.
+Based on current Multi-ASIC design, a service might be a host namespace service, like telemetry, SNMP, etc., or replicated per each ASIC namespace, like teamd, bgp, etc., or running in all host and ASICs namespaces, like lldp. Based on */host-namespace* and */per-namespace* fields in manifest file, corresponding service files are created per each namespace. *systemd-sonic-generator* is invoked to create service units per each namespace.
 
 ###### Manifest file path
 
