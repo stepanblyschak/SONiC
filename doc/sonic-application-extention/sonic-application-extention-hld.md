@@ -434,11 +434,13 @@ This is similar to approach SONiC uses for CONFIG DB version.
 
 # 2.6 Installation Dependencies
 
-An installation process performs a set of checks based on the manifest file. First check to perform is a SONiC base image version match.
-If the 
-If a package listed in */depends* is not installed or it does not match the required version condition the installation fails.
-Same way, if a package is installed and it matches a condition in */breaks* section of the manifest file of the package that
-is about to be installed the user will get an error.
+An installation process has to verify all requirements are met. First check to perform is a SONiC base image version match.
+The package manager has to build the dependency graph and resolve it to verify all dependent packages are installed and version
+requirements are met. Similary the package that is about to be installed does not break any other package or any installed package
+does not break the installing package.
+
+The package manager curently won't try to install missing packages or resolve dependency conflicts but give the user an appropriate
+error message.
 
 # 2.7 Service File
 
