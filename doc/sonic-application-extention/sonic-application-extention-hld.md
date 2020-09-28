@@ -164,7 +164,9 @@ The scope of this document is limited to phase 1.
 
 **Docker Registry** - a storage and content delivery system, holding named Docker images, available in different tagged versions
 
-![](img/sonic-pkg-basic-concepts.svg "Figure 2.1 Basic Concepts")
+<p align=center>
+<img src="img/sonic-pkg-basic-concepts.svg" alt="Figure 2.1 Basic Concepts">
+</p>
 
 There are three notions: **package**, **repository** and **registry**. A repository is basically a Docker registry (private or open like Docker Hub)
 repository with tagged images for specific package.
