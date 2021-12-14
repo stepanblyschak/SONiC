@@ -43,7 +43,7 @@ In case *hostcfgd* has failed to execute an operation a generic "failed" state i
 information in a field "error_message" which will contain the output of the failed command ("systemctl start/stop") for better debugging, but
 this is out of scope for this document.
 
-This new field is not a replacement of those fields in STATE DB introduced by Kubernetes support - https://github.com/Azure/SONiC/pull/680.
+This new field is not a replacement for those fields in STATE DB introduced by Kubernetes support - https://github.com/Azure/SONiC/pull/680.
 The "system_state" and "remote_state" are related to the container state, not the service state.
 
 The *sonic-package-manager* utility when performing an upgrade of the package needs to perform (in high level):
