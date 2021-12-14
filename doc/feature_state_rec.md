@@ -51,12 +51,12 @@ The *sonic-package-manager* utility when performing an upgrade of the package ne
 - if the service was enabled in CONFIG DB:
   - // stop the service (**must** block until it is finished):
   - Set state "disabled" in CONFIG DB
-  - Wait for "state" == "disabled" in STATE DB or timeout
+  - Wait for "state" == "disabled" in STATE DB
 - uninstall old docker image
 - if the service was enabled in CONFIG DB:
   - // start the service (blocks until it is finished)
   - Set state "enabled" in CONFIG DB
-  - Wait for "state" == "enabled" in STATE DB or timeout
+  - Wait for "state" == "enabled" in STATE DB
 
 ### SAI API
 
