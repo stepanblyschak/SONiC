@@ -689,7 +689,7 @@ These settings are only configured in FRR when DEVICE_METADATA field "type" is s
 
 ### FPM sync daemon reconciliation flow
 
-```
+```mermaid
 sequenceDiagram
     activate bgp_eoiu_marker
     bgp_eoiu_marker -->> STATE_DB: warmstart.initialize("bgp", "bgp")
