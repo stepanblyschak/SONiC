@@ -144,9 +144,9 @@ namespace swss {
 class OidMapper
 {
 public:
-	/**
-	 * @brief Key in the APPL_KEY_TO_OID table
-	 */
+    /**
+     * @brief Key in the APPL_KEY_TO_OID table
+     */
     struct Key
     {
 		std::string tableName;
@@ -154,51 +154,51 @@ public:
         std::string keyName;
     };
 
-	/**
-	 * @brief Construct OidMapper from APPL_STATE_DB connector
-	 *
-	 * @param applStateDb Reference to swss::DBConnector object
-	 */
+   /**
+    * @brief Construct OidMapper from APPL_STATE_DB connector
+    *
+    * @param applStateDb Reference to swss::DBConnector object
+    */
     OidMapper(swss::DBConnector& applStateDb);
 
     /**
-	 * @brief Sets oid for the given key.
-	 *
-	 * @param key Key to set
-	 * @param oid Oid to set
-	 * @return bool True if key was successfully inserted
-	 */
+     * @brief Sets oid for the given key.
+     *
+     * @param key Key to set
+     * @param oid Oid to set
+     * @return bool True if key was successfully inserted
+     */
     bool set(_In_ const Key& key, _In_ sai_object_id_t oid);
 
     /**
-	 * @brief Gets oid for the given key.
-	 *
-	 * @param key Key to find
-	 * @return sai_object_id_t SAI OID if key found or SAI_NULL_OBJECT_ID
-	 */
+     * @brief Gets oid for the given key.
+     *
+     * @param key Key to find
+     * @return sai_object_id_t SAI OID if key found or SAI_NULL_OBJECT_ID
+     */
     sai_object_id_t get(_In_ const Key& key);
 
     /**
-	 * @brief Get CFG_DB/APPL_DB table and key by SAI OID
-	 *
-	 * @param oid SAI OID for find
-	 * @return std::pair<std::string, std::string> Table name and key name
-	 */
+     * @brief Get CFG_DB/APPL_DB table and key by SAI OID
+     *
+     * @param oid SAI OID for find
+     * @return std::pair<std::string, std::string> Table name and key name
+     */
     std::pair<std::string, std::string> getKeyByOID(_In_ sai_object_id_t oid);
 
     /**
-	 * @brief Erases oid for the given key.
-	 *
-	 * @param key Key to erase
-	 */
+     * @brief Erases oid for the given key.
+     *
+     * @param key Key to erase
+     */
     void erase(_In_ const Key& key);
 
     /**
-	 * @brief Checks whether OID mapping exists for the given key.
-	 *
-	 * @param key Key to find
-	 * @return bool True if exists, otherwise false
-	 */
+     * @brief Checks whether OID mapping exists for the given key.
+     *
+     * @param key Key to find
+     * @return bool True if exists, otherwise false
+     */
     bool exists(_In_ const Key& key);
 };
 
