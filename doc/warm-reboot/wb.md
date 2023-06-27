@@ -1,13 +1,60 @@
+<!-- omit in toc -->
 # Warm Reboot
 
-## Overview
+<!-- omit in toc -->
+## Table of Content
+
+- [LibSAI](#libsai)
+- [LibSAI/Controller Application flow](#libsaicontroller-application-flow)
+- [Linux Restart](#linux-restart)
+- [Persistent Location](#persistent-location)
+- [Application warm restart state machine](#application-warm-restart-state-machine)
+- [Application warm restart configuration and state](#application-warm-restart-configuration-and-state)
+  - [WARM\_RESTART\_ENABLE\_TABLE](#warm_restart_enable_table)
+  - [WARM\_RESTART\_TABLE](#warm_restart_table)
+- [Database](#database)
+- [SYNCD](#syncd)
+  - [SYNCD Views on Warm Boot Flow](#syncd-views-on-warm-boot-flow)
+  - [SYNCD View Comparison Logic](#syncd-view-comparison-logic)
+  - [SYNCD Views on Fast Fast Boot Flow](#syncd-views-on-fast-fast-boot-flow)
+  - [SYNCD system flow](#syncd-system-flow)
+    - [SWSS common APIs](#swss-common-apis)
+    - [Orchagent](#orchagent)
+    - [Neighbor reconciliation flow](#neighbor-reconciliation-flow)
+    - [Teamd](#teamd)
+    - [Teamd warm restart flow](#teamd-warm-restart-flow)
+    - [Teamd reconciliation flow](#teamd-reconciliation-flow)
+    - [BGP](#bgp)
+      - [FPM sync daemon reconciliation flow](#fpm-sync-daemon-reconciliation-flow)
+- [Management plane containers](#management-plane-containers)
+- [ARP/NDP helper](#arpndp-helper)
+- [Warm Boot finalizer](#warm-boot-finalizer)
+- [System flow](#system-flow)
+
+<!-- omit in toc -->
+### Revision
+
+|  Rev  |  Date   |      Author      | Change Description |
+| :---: | :-----: | :--------------: | ------------------ |
+|  0.0  |  2018   |                  | Initial            |
+|  0.1  | 09/2020 | Stepan Blyshchak | Update             |
+
+### Scope  
+
+TODO: This section describes the scope of this high-level design document in SONiC.
+
+### Definitions/Abbreviations 
+
+TODO: This section covers the abbreviation if any, used in this high-level design document and its definitions.
+
+### Overview
 
 The goal of SONiC warm reboot is to be able to restart and upgrade SONiC software without impacting the data plane.
 Warm restart of each individual *feature* is also part of the goal.
 
-## Use cases
+#### Use cases
 
-## In-Service restart
+#### In-Service restart
 
 The mechanism of restarting a component without impact to the service. This assumes that the software version of the component has not changed after the restart.
 There could be data changes during restart window:
@@ -17,48 +64,52 @@ There could be data changes during restart window:
 
 Component here could be the whole SONiC system or just one or multiple of the *feature*s running in SONiC.
 
-## In-Service upgrade
+#### In-Service upgrade
 
 The mechanism of upgrading to a newer version of a component without impacting the service.
 
 Component here could be the whole SONiC system or just one or multiple of the dockers running in SONiC.
 
-## Un-Planned restart
+#### Un-Planned restart
 
 It is desired for all network applications and orchagent to be able to handle unplanned restart, and restore gracefully.
 It is not a requirement on syncd and ASIC/LibSAI due to dependency on ASIC processing.
 
-### Per-component examples
+#### Per-component examples
 
-### BGP restart
+#### BGP restart
 
 After BGP restart, new routes may be learned from BGP peers and some routes which had been pushed down to APP DB and ASIC may be gone.
 The system should be able to clear the stale route from APP DB down to ASIC and program the new route.
 
-### swss restart
+#### swss restart
 
 After swss restart, all the port/LAG, vlan, interface, ARP and route data should be restored from CFG DB, APP DB, Linux Kernel and other reliable sources.
 There could be port state, ARP, FDB changes during the restart window, proper sync processing should be performed.
 
-### syncd restart
+#### syncd restart
 
 The restart of syncd should leave data plane intact. After restart, syncd resumes control of ASIC/LibSAI and communication with swss.
 All other functions which run in syncd should be restored too.
 
-### teamd restart
+#### teamd restart
 
 The restart of teamd should not cause link flapping or any traffic loss. All lags at data plane should remain the same.
 
-## Requirements
+### Requirements
 
 - Keep data plane running while software restarts, in a *happy* path (no network state changes occurred during the restart window) none of the data packets are dropped nor black holed.
 - In case the network state changes have occurred during the restart window, the software and hardware states have to become in sync with the network state eventually.
 - The control plane downtime is not exceeding the 90 seconds downtime limit.
 - The management plane downtime has relaxed requirements but usually management services (telemetry, SNMP, etc.) restart in less than 5 minutes.
 
-## Design
+### Architecture Design
 
-## Hardware
+TODO:
+
+### High-Level Design
+
+#### ASIC
 
 SONiC supports two kinds of hardware warm restart designs.
 
@@ -70,12 +121,6 @@ the currently active one while another is not in use and reserved to be used in 
 required to reprogram the second bank while the first bank is still active and once the configuration is finished atomically switch
 to the second bank without dropping a single packet. This, however, means that the hardware can use only half of TCAM resources when
 such capability is enabled. Also, some counters do not persist across warm boot in such case due to recreation of those counters.
-
-There are pros and cons of two implementations. For example, the traditional implementation can utilize full TCAM resources, while the
-two banks approach is limited to half of the resources (ACLs, route entries, neighbor entries, etc.). On another hand, the two banks approach
-is more robust when backward incompatible changes occur. E.g, one software version might implement a completely different pipeline for a particular
-functionality comparing to the version we are upgrading from and still be hit-less, while it might be a challenge to implement a truly hit-less upgrade
-in such case for a traditional approach which will interrupt the traffic for short amount of time.
 
 The two banks approach is known as **fast-fast** boot approach in SONiC.
 
@@ -346,20 +391,79 @@ Based on the SAI object data model, each view is a directed acyclic graph, all o
 
 ### SYNCD system flow
 
-## SWSS
+#### SWSS common APIs
 
-### Orchagent
+1. [WarmStart](https://github.com/sonic-net/sonic-swss-common/blob/master/common/warm_restart.h) 
+provides methods to get/set application warm state, timers, check if the application currently starts in warm-restart or system warm-reboot mode, etc. Available for Python via swig bindings.
+2. [AppRestartAssist](https://github.com/sonic-net/sonic-swss/blob/master/warmrestart/warmRestartAssist.h) wraps WarmStart class and provides higher level APIs for getting/setting application warm start state as well as provides an interface to help perform reconciliation.
 
-Orchagent is a key piece of software between upper layer protocols and LibSAI/ASIC. It translates the configuration in APP DB and partially CFG DB into SAIRedis API calls which are then
-sent to syncd daemon and translated to actual SAI calls.
 
-The main idea of orchagent warm-reboot is to configure syncd to switch into INIT view mode and replay all the configuration from APP DB, CFG DB into ASIC DB. Once all configuration is done,
-orchagent configures syncd to switch into APPLY view mode.
+#### Orchagent
 
-### Orchagent system flow
+Orchagent translates the configuration in APP DB and partially CFG DB into SAIRedis API calls which are then sent to syncd daemon and translated to actual SAI calls.
+
+Orchagent shutdown flow disables FDB aging and learning to not let HW change FDB table while software is down as that could lead to inconsistency between FDBs in redis vs. ASIC after reboot and freezes:
 
 ```mermaid
 sequenceDiagram
+    participant warm-reboot
+    loop Retry RESTARTCHECK N[5] times until it succeeds
+        warm-reboot -->> Redis DB: RESTARTCHECK request
+        activate Redis DB
+        Redis DB -->> orchagent: RESTARTCHECK request
+        activate orchagent
+        Redis DB -->> warm-reboot: 
+        deactivate Redis DB
+        alt Are pending tasks in m_toSync present?
+            orchagent -->> Redis DB: RESTARTCHECK failure
+            activate Redis DB
+            Redis DB -->> warm-reboot: RESTARTCHECK failure
+            deactivate Redis DB
+            activate warm-reboot
+            opt Number or retries reached N times?
+                warm-reboot -->> User: Fail the operation
+            end
+            deactivate warm-reboot
+        else
+            orchagent -->> syncd: Disable FDB aging
+            activate syncd
+            syncd -->> orchagent: 
+            deactivate syncd
+            loop For each port
+                orchagent -->> syncd: Disable bridge port FDB learning
+                activate syncd
+                syncd -->> orchagent: 
+                deactivate syncd
+            end
+            orchagent -->> Redis DB: RESTARTCHECK success
+            activate Redis DB
+            Redis DB -->> warm-reboot: RESTARTCHECK success
+            deactivate Redis DB
+            activate warm-reboot
+            warm-reboot -->> User: Operation is successful,<br/> orchagent is ready for warm restart
+            deactivate warm-reboot
+            orchagent -->> orchagent: Freeze, no more tasks are <br/> executed from APP DB, CFG DB
+            deactivate orchagent
+        end
+    end
+
+```
+
+The main operation of orchagent warm-boot startup consists of:
+1. Call Orch::bake() on all Orch to refill internal task queue - *m_toSync* with data from APPL_DB/CFG_DB
+2. Call Orch::doTask() on all Orch to execute tasks from *m_toSync*
+
+The tasks form a tree due to dependencies (e.g. LAG member creation only after the LAG is created itself)
+and orchagent executes Orch::doTask() 3 times to ensure there are no pending tasks that were postponed due to missing dependency.
+
+```mermaid
+sequenceDiagram
+    participant orchagent
+    participant STATE_DB
+    participant Orch
+    participant APPL_DB
+    participant syncd
+
     orchagent -->> STATE_DB: WarmStart::setWarmStartState("orchagent", WarmStart::INITIALIZED);
     activate STATE_DB
     activate orchagent
@@ -372,32 +476,44 @@ sequenceDiagram
     syncd -->> orchagent: SAI_STATUS_SUCCESS
     deactivate orchagent
     deactivate syncd
-    orchagent -->> APP_DB: 
+    orchagent -->> APPL_DB: 
 
     activate orchagent
-    activate APP_DB
-    APP_DB -->> orchagent: Read configuration and save into m_toSync
-    deactivate orchagent
-    deactivate APP_DB
 
+    loop For each Orch
+        orchagent -->> Orch: Orch::bake()
+        activate Orch
+        Orch -->> APPL_DB: 
+        activate APPL_DB
+        APPL_DB -->> Orch: Read configuration and save into m_toSync
+        deactivate APPL_DB
+        Orch -->> orchagent: 
+        deactivate Orch
+    end 
 
-    
-    orchagent -->> syncd: Replaying configuration from m_toSync
-    syncd -->> orchagent: 
-    activate orchagent
-    activate syncd
+    loop For each Orch
+        orchagent -->> Orch: Orch::doTask()
+        activate Orch
+        Orch -->> syncd: 
+        activate syncd
+        syncd -->> Orch: Execute SAI APIs
+        deactivate syncd
+        Orch -->> orchagent: 
+        deactivate Orch
+    end 
+
     deactivate orchagent
-    deactivate syncd
 
     opt Are more pending tasks in m_toSync?
         activate orchagent
         orchagent->>orchagent: Warm restart failure
         deactivate orchagent
+        note right of orchagent: If any of the tasks wasn't processed,<br> it means there's inconsistent state between <br>orchagent and SAI and we fail immediately.
     end
 
+    activate orchagent
     orchagent -->> STATE_DB: WarmStart::setWarmStartState("orchagent", WarmStart::RESTORED);
     activate STATE_DB
-    activate orchagent
     STATE_DB-->>orchagent: 
     deactivate STATE_DB
     deactivate orchagent
@@ -413,7 +529,7 @@ sequenceDiagram
     STATE_DB-->>orchagent: 
     deactivate STATE_DB
     deactivate orchagent
-    orchagent -->> syncd: refresh ports operational status
+    orchagent -->> syncd: sync ports operational status from HW
     activate orchagent
     activate syncd
     syncd -->> orchagent: 
@@ -422,68 +538,26 @@ sequenceDiagram
      Note right of orchagent: Warm start flow is finished, continue to operate in normal mode
 ```
 
+#### Neighbor reconciliation flow
 
-```mermaid
-sequenceDiagram
-    actor User
-    loop Retry RESTARTCHECK N[5] times until it succeeds
-        User -->> Redis DB: RESTARTCHECK request
-        activate Redis DB
-        Redis DB -->> orchagent: RESTARTCHECK request
-        activate orchagent
-        Redis DB -->> User: 
-        deactivate Redis DB
-        alt Are pending tasks in m_toSync present?
-            orchagent -->> Redis DB: RESTARTCHECK failure
-            activate Redis DB
-            Redis DB -->> User: RESTARTCHECK failure
-            deactivate Redis DB
-            activate User
-            opt Number or retries reached N times?
-                User -->> User: Fail the operation
-            end
-            deactivate User
-        else
-            orchagent -->> syncd: Disable FDB aging
-            activate syncd
-            syncd -->> orchagent: 
-            deactivate syncd
-            loop For each port
-                orchagent -->> syncd: Disable bridge port FDB learning
-                activate syncd
-                syncd -->> orchagent: 
-                deactivate syncd
-            end
-            orchagent -->> Redis DB: RESTARTCHECK success
-            activate Redis DB
-            Redis DB -->> User: RESTARTCHECK success
-            deactivate Redis DB
-            activate User
-            User -->> User: Operation is successful,<br/> orchagent is ready for warm restart
-            deactivate User
-            orchagent -->> orchagent: Freeze, no more tasks are <br/> executed from APP DB, CFG DB
-            deactivate orchagent
-        end
-    end
-```
-
-### Neighbor reconciliation flow
-
-Neighbors configuration is a crucial part of the L3 switch software. It is best when the neighbor configuration on the hardware is in sync with the actual switch neighbors on the network.
+Neighbors configuration is a crucial part of the L3 switch software. It is required that the neighbor configuration on the hardware is in sync with the actual switch neighbors on the network.
 It can't be assumed that neighbors won't change during warm restart window, while the software is restarting, the SONiC switch software has to be ready for scenarios in which during the restart window:
 - Existing neighbors went down, e.g: VMs crashed on the server connected to ToR switch which undergoes warm-reboot.
 - New neighbors appeared on the network, e.g: VMs created on the server connected to ToR switch which undergoes warm-reboot.
 - MAC changes, e.g: VMs re-created or re-configured on the server connected to ToR switch which undergoes warm-reboot.
 
-This is handled by the neighbors reconciliation flow. Three applications are participating in this flow - *orchagent*, *neighsyncd* and *restore_neighbors.py* script.
+This is handled by the neighbors reconciliation flow. Three applications are participating in this flow:
+- *orchagent*
+- *neighsyncd*
+- *restore_neighbors.py*
 
 During the restoration process, all known pre-boot neighbors are programmed to the Linux Kernel as STALE neighbors and an ARP or NDP packet is sent depending on whether the neighbors is IPv4 or IPv6 neighbor.
-This is done by the process called restore_neighbors.py which is part of swss.
+This is done by the process restore_neighbors.py which is part of swss.
 This process is repeated from few times until the neighsyncd_timer expires, which by default is set to 110 sec. It is required to continuously repeat the process since some *host* interfaces might not be created
 yet or not yet operationally up. In case the neighbor is alive it will reply with a valid ARP/NDP with up-to-date MAC address and the Linux Kernel itself will mark the neighbor as REACHABLE.
 Once timer expires, restore_neighbors.py set a flag to STATE DB table called NEIGH_RESTORE_TABLE field "restored" with value "true".
 
-In the meantime, the neighsyncd process is waiting for the "restored" flag to be set to "true" by the restore_neighbors.py script and starts the reconciliation process, which performs the difference between
+In the meantime, the neighsyncd process is waiting for the "restored" flag to be set to "true" by the restore_neighbors.py script and starts the reconciliation process, which calculates the difference between
 Linux Kernel neighbors (*new-life* state) and APP DB neighbors (*old-life* state) and pushes the difference to APP DB:
 - New neighbors are set to APP DB
 - Existing neighbors whose MAC has changed are set to APP DB with the new MAC
@@ -491,27 +565,23 @@ Linux Kernel neighbors (*new-life* state) and APP DB neighbors (*old-life* state
 
 Once that is done, orchagent will apply the changes down to SAIRedis, syncd and SAI.
 
-The below flow illustrates the point.
-
 ```mermaid
 sequenceDiagram
-
-    activate neighsyncd
     neighsyncd -->> neighsyncd: Wait till NeighSync::isNeighRestoreDone() is true
 
     activate restore_neighbors
-    restore_neighbors -->> STATE_DB: warmstart.initialize("neighsyncd", "swss")
+    restore_neighbors -->> STATE_DB: WarmStart.initialize("neighsyncd", "swss")
     activate STATE_DB
     STATE_DB -->> restore_neighbors: 
     deactivate STATE_DB
 
-    opt warmstart.isSystemWarmRebootEnabled()
+    opt WarmStart.isSystemWarmRebootEnabled()
         Note right of restore_neighbors: Neighbor restoration is not required in case<br/>single service restart, <br/> since kernel already has neighbors
         restore_neighbors -->> restore_neighbors: Start neighsyncd_timer
         deactivate restore_neighbors
 
         loop neighsyncd_timer not expired
-            loop For each neighbor known prior to warm reboot
+            loop For each neighbor in APPL_DB
                 activate restore_neighbors
                 restore_neighbors -->> Kernel: Netlink STALE neighbor add IP/MAC
                 
@@ -535,36 +605,37 @@ sequenceDiagram
     restore_neighbors -->> STATE_DB: db.set(db.STATE_DB, 'NEIGH_RESTORE_TABLE|Flags', 'restored', 'true')
     activate STATE_DB
     STATE_DB -->> restore_neighbors: 
+    STATE_DB -->> neighsyncd: 
     deactivate STATE_DB
     deactivate restore_neighbors
 
-    deactivate neighsyncd
-
     
-    neighsyncd -->> Kernel: Dump all neighbors
-    activate neighsyncd
-    deactivate neighsyncd
-    
+    neighsyncd -->> Kernel: Dump all neighbors   
+    activate Kernel 
     
     Kernel -->> neighsyncd: NeighSync::onMsg()
+    deactivate Kernel
+
     activate neighsyncd
     neighsyncd -->> neighsyncd: Save entries into <br/>internal cache map
-    neighsyncd -->> APP_DB: Push the difference into database<br/> set new neighbors, update existing, remove stale.
+    neighsyncd -->> APPL_DB: Push the difference into database<br/> set new neighbors, update existing, remove stale.
 
     deactivate neighsyncd
 ```
 
-## Teamd
+#### Teamd
 
 Teamd user space process implements the LACP protocol. LACP is fully supported by SONiC including the warm-reboot functionality.
-The upstream teamd implementation, unfortunately, does not implement warm restart capabilities, so SONiC has patches which implement
+The upstream teamd implementation, unfortunately, does not implement warm restart capabilities, so SONiC has [patched](https://github.com/sonic-net/sonic-buildimage/blob/master/src/libteam/patch/0008-libteam-Add-warm_reboot-mode.patch) teamd which implement
 the required teamd changes to support SONiC warm-reboot.
+
+Teamd warm-reboot idea is to dump current LACP port channel and port channel member state as well as LACP PDUs last received from the peer.
 
 Teamd has been extended to support starting in warm mode with the addition of '-w' and '-L' command line options:
 
-| Short option | Long option | Description |
-|--------------|-------------|-------------|
-| -w           | --warm-start | Start in warm mode |
+| Short option | Long option      | Description                          |
+| ------------ | ---------------- | ------------------------------------ |
+| -w           | --warm-start     | Start in warm mode                   |
 | -L           | --lacp-directory | Directory for saved LACP PDU packets |
 
 To implement the shutdown process teamd handles SIGUSR1 signal as the indication of the start of warm shutdown.
@@ -572,12 +643,12 @@ To implement the shutdown process teamd handles SIGUSR1 signal as the indication
 Teamd warm restart only works in case LACP slow mode is configured. In slow LACP mode, we have 90 sec (3 * 30s LACP slow period)
 to start again otherwise the peer will reset the LAG causing disruption of traffic. So, *fast* LACP mode is not supported for warm restart.
 
-### Teamd warm restart flow
+#### Teamd warm restart flow
 
 ```mermaid
 sequenceDiagram
-    actor User
-    User -->> teamd: SIGUSR1
+    participant warm-reboot
+    warm-reboot -->> teamd: SIGUSR1
     activate teamd
 
     teamd -->> teamd: teamd_refresh_ports()
@@ -599,16 +670,19 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    actor User
-    User -->> teamd: Started in warm mode
+    participant teammgrd
+    teammgrd -->> teamd: Started in warm mode
     activate teamd
 
     File System -->> teamd: /host/warmboot/PortChannelXXX
     teamd -->> teamd: lacp_state_load()
 
-    loop wait for member host interfaces EthernetYYY to beome up
-        File System -->> teamd: /host/warmboot/EthernetYYY
-        teamd -->> teamd: lacpdu_read()
+    loop wait for member host interfaces EthernetYYY to become up
+        opt Warm started?
+            File System -->> teamd: /host/warmboot/EthernetYYY
+            teamd -->> teamd: lacpdu_read() <br>reads LACP packet from the file
+            teamd -->> teamd: lacpdu_process() <br>injects the packet into teamd to<br> restore members state
+        end
     end
 
     teamd -->> teamd: stop_wr_mode()
@@ -619,7 +693,7 @@ sequenceDiagram
 ```
 
 
-### Teamd reconciliation flow
+#### Teamd reconciliation flow
 
 During the warm restart window the peer of the LAG can go down or one of peers LAG members may go down. The network state must be reconciled with the state of the ASIC.
 In this process the *teamsyncd* and *teammgrd* processes are involved is involved.
@@ -647,10 +721,10 @@ sequenceDiagram
 
     opt teamsyncd_timer expired
         Note right of teamsyncd: Start reconciliation
-        activate APP_DB
-        teamsyncd -->> APP_DB: Push the difference to APP DB
-        APP_DB -->> teamsyncd: 
-        deactivate APP_DB
+        activate APPL_DB
+        teamsyncd -->> APPL_DB: Push the difference to APP DB
+        APPL_DB -->> teamsyncd: 
+        deactivate APPL_DB
     end
 
     teamsyncd -->> STATE_DB: WarmStart::setWarmStartState(TEAMSYNCD_APP_NAME, WarmStart::RECONCILED);
@@ -658,7 +732,7 @@ sequenceDiagram
     deactivate teamsyncd
 ```
 
-## BGP
+#### BGP
 
 FRR suite supports Graceful Restart and EOR capabilities:
 - https://datatracker.ietf.org/doc/html/rfc4724
@@ -678,6 +752,8 @@ of-RIB marker that can be used by a BGP speaker to indicate to its
 peer the completion of the initial routing update after the session
 is established. 
 
+The following FRR configuration is required to support warm-reboot:
+
 ```
  bgp graceful-restart
  bgp graceful-restart restart-time 240
@@ -687,46 +763,64 @@ is established.
 
 These settings are only configured in FRR when DEVICE_METADATA field "type" is set to "ToRRouter".
 
-### FPM sync daemon reconciliation flow
+##### FPM sync daemon reconciliation flow
 
 ```mermaid
 sequenceDiagram
-    activate bgp_eoiu_marker
-    bgp_eoiu_marker -->> STATE_DB: warmstart.initialize("bgp", "bgp")
+    participant bgp_eoiu_marker.py
+    participant STATE_DB
+    participant bgpd
+    participant zebra 
+    participant fpmsyncd
+    participant APPL_DB
+    
+    activate bgp_eoiu_marker.py
+    bgp_eoiu_marker.py -->> STATE_DB: warmstart.initialize("bgp", "bgp")
     loop 120s timer
 
           
-        bgp_eoiu_marker -->> bgpd: vtysh -c 'show bgp summary json'
+        bgp_eoiu_marker.py -->> bgpd: vtysh -c 'show bgp summary json'
         activate bgpd  
         deactivate bgpd
-        bgpd -->> bgp_eoiu_marker: 
+        bgpd -->> bgp_eoiu_marker.py: 
         opt EOIU marker set for IPv4 neighbors?
-            bgp_eoiu_marker -->> STATE_DB: "set BGP_STATE_TABLE|IPv4|eoiu state true"
+            bgp_eoiu_marker.py -->> STATE_DB: "set BGP_STATE_TABLE|IPv4|eoiu state true"
         end
         opt EOIU marker set for IPv6 neighbors?
-            bgp_eoiu_marker -->> STATE_DB: "set BGP_STATE_TABLE|IPv6|eoiu state true"
+            bgp_eoiu_marker.py -->> STATE_DB: "set BGP_STATE_TABLE|IPv6|eoiu state true"
         end
     end
-    
-    deactivate bgp_eoiu_marker
 
     activate fpmsyncd
     fpmsyncd -->> fpmsyncd: Start bgp_timer (default 120s)
-    fpmsyncd -->> STATE_DB: setState(WarmStart::RESTORED);
+    fpmsyncd -->> STATE_DB: WarmStartHelper::setState(WarmStart::RESTORED);
+    activate STATE_DB
+    STATE_DB -->> fpmsyncd: 
+    deactivate STATE_DB
+
+    bgpd -->> zebra: RTM_NEWROUTE/<br>RTM_DELROUTE
+    zebra -->> fpmsyncd: RTM_NEWROUTE/<br>RTM_DELROUTE 
+    fpmsyncd -->> fpmsyncd: WarmStartHelper::insertRefreshMap
+    note left of fpmsyncd:  Updates from zebra are cached for later reconciliation
+    
+    deactivate bgp_eoiu_marker.py
 
     fpmsyncd -->> fpmsyncd: wait until IPv4|eoiu, IPv6|eoiu<br/> or timer expires
     deactivate fpmsyncd
 
     activate fpmsyncd
-    fpmsyncd -->> APP_DB: Run reconciliation
-    activate APP_DB
-    APP_DB -->> fpmsyncd: 
-    deactivate APP_DB
+    fpmsyncd -->> APPL_DB: Run reconciliation
+    activate APPL_DB
+    APPL_DB -->> fpmsyncd: 
+    deactivate APPL_DB
     Note right of fpmsyncd: Differences are pushed to APP DB
 
     deactivate fpmsyncd
 
-    fpmsyncd -->> STATE_DB: setState(WarmStart::RECONCILED);
+    fpmsyncd -->> STATE_DB: WarmStartHelper::setState(WarmStart::RECONCILED);
+    activate STATE_DB
+    STATE_DB -->> fpmsyncd: 
+    deactivate STATE_DB
 ```
 
 ## Management plane containers
@@ -740,6 +834,43 @@ And more, are delayed by the systemd timer by 3m and 30 seconds since Linux kern
 The main idea behind delaying these services is mostly to free CPU time for more important services at boot.
 
 ## ARP/NDP helper
+
+This is an additional configuration done before warm reboot User optionally passes an IP of the control plane assistant to warm-reboot command
+It consists of mirroring configuration for ARP/NDP packets and VXLAN configuration for ARP/NDP replies this configuration is removed after warm reboot finishes by the warm-reboot finalizer.
+
+<p align=center>
+<img src="img/control-plane-assistant.png" alt="Control Plane Assistant">
+</p>
+
+Example configuration that is applied by neighbor_advertiser script:
+
+```json
+    "VXLAN_TUNNEL": {
+        "neigh_adv": {
+            "dst_ip": "192.168.8.1",
+            "src_ip": "10.1.0.32"
+        }
+    },
+    "VXLAN_TUNNEL_MAP": {
+        "neigh_adv|map_1": {
+            "vlan": "Vlan1000",
+            "vni": "1000"
+        }
+    },
+    "ACL_RULE": {
+        "EVERFLOWV6|rule_nd": {
+            "ICMPV6_TYPE": "135",
+            "PRIORITY": "8887",
+            "mirror_action": "neighbor_advertiser"
+        },
+        "EVERFLOW|rule_arp": {
+            "PRIORITY": "8888",
+            "ether_type": "2054",
+            "mirror_action": "neighbor_advertiser"
+        }
+    },
+```
+
 
 ## Warm Boot finalizer
 
