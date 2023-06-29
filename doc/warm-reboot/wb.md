@@ -9,42 +9,41 @@
 - [Persistent Location](#persistent-location)
 - [Database](#database)
 - [Linux Restart](#linux-restart)
-- [Application warm restart state machine](#application-warm-restart-state-machine)
 - [Application warm restart configuration and state](#application-warm-restart-configuration-and-state)
-  - [WARM\_RESTART\_ENABLE\_TABLE](#warm_restart_enable_table)
-  - [WARM\_RESTART\_TABLE](#warm_restart_table)
 - [SYNCD](#syncd)
   - [SYNCD in Warm Boot Flow](#syncd-in-warm-boot-flow)
-    - [View comparison logic](#view-comparison-logic)
   - [SYNCD in Fast Fast Boot](#syncd-in-fast-fast-boot)
-    - [SWSS common APIs](#swss-common-apis)
-    - [Orchagent](#orchagent)
-    - [Neighbor reconciliation flow](#neighbor-reconciliation-flow)
-    - [Teamd](#teamd)
-    - [Teamd warm restart flow](#teamd-warm-restart-flow)
-    - [Teamd reconciliation flow](#teamd-reconciliation-flow)
-    - [BGP](#bgp)
-      - [FPM sync daemon reconciliation flow](#fpm-sync-daemon-reconciliation-flow)
-- [Management plane containers](#management-plane-containers)
-- [ARP/NDP helper](#arpndp-helper)
+- [SWSS common APIs](#swss-common-apis)
+- [Orchagent](#orchagent)
+- [Neighbors](#neighbors)
+- [Teamd](#teamd)
+- [BGP](#bgp)
+- [Management plane](#management-plane)
+- [Control plane assistant (CPA)](#control-plane-assistant-cpa)
 - [Warm Boot finalizer](#warm-boot-finalizer)
 - [System flow](#system-flow)
 
 <!-- omit in toc -->
 ### Revision
 
-|  Rev  |  Date   |      Author      | Change Description |
-| :---: | :-----: | :--------------: | ------------------ |
-|  0.0  |  2018   |                  | Initial            |
-|  0.1  | 09/2020 | Stepan Blyshchak | Update             |
+|  Rev  |  Date   |      Author      | Change Description                         |
+| :---: | :-----: | :--------------: | ------------------------------------------ |
+|  0.0  |  2018   |       MSFT       | Initial                                    |
+|  0.1  | 09/2020 | Stepan Blyshchak | Update and align to current implementation |
 
 ### Scope  
 
-TODO: This section describes the scope of this high-level design document in SONiC.
+This document describes warm-reboot functionality in SONiC.
 
 ### Definitions/Abbreviations 
 
-TODO: This section covers the abbreviation if any, used in this high-level design document and its definitions.
+| **Abbreviation** | **Definition**                        |
+| ---------------- | ------------------------------------- |
+| SONiC            | Software for Open Networking in Cloud |
+| DB               | Database                              |
+| API              | Application Programming Interface     |
+| SAI              | Switch Abstraction Interface          |
+| CPA              | Control plane assistant               |
 
 ### Overview
 
@@ -102,10 +101,6 @@ The restart of teamd should not cause link flapping or any traffic loss. All lag
 - The control plane downtime is not exceeding the 90 seconds downtime limit. 90 seconds is a strict requirement for teamd restoration to keep LAGs running LACP active on the peers.
 - The management plane downtime has relaxed requirements but usually management services (telemetry, SNMP, etc.) restart in less than 5 minutes.
 
-### Architecture Design
-
-TODO:
-
 ### High-Level Design
 
 #### ASIC
@@ -118,7 +113,7 @@ from a dump made before restart so that in the end the software and the ASIC are
 Another flavor of hardware implementation of warm restart includes logical division of the ASIC TCAM into two banks, one of which is
 the currently active one while another is not in use and reserved to be used in the *new-life*. After software restarts it is
 required to reprogram the second bank while the first bank is still active and once the configuration is finished atomically switch
-to the second bank without dropping a single packet. This, however, means that the hardware can use only half of TCAM resources when
+to the second bank wiis dInthout dropping a single packet. This, however, means that the hardware can use only half of TCAM resources when
 such capability is enabled. Also, some counters do not persist across warm boot in such case due to recreation of those counters.
 
 The two banks approach is known as **fast-fast** boot approach in SONiC.
@@ -138,11 +133,17 @@ SAI API has support for planned warm restart. The API provides a set of attribut
 | SAI_SWITCH_ATTR_PRE_SHUTDOWN    | boolean       | Indicates controlled switch pre-shutdown as first step of warm shutdown. <br/> The scope of pre-shutdown is to backup SAI/SDK data, but leave CPU port active for some final control plane traffic to go out. <br/> This attribute has special meaning for fast-fast boot and indicates to LibSAI implementation to initialize the fast-fast boot procedure. |
 | SAI_SWITCH_ATTR_FAST_API_ENABLE | boolean       | Indicates the end of the fast-fast boot operation when set to False. <br/> The LibSAI will switch the banks in a non-disruptive manner. <br/> Only required to support fast-fast boot implementation.                                                                                                                                                        |
 
+<!-- omit in toc -->
+###### Table 1. SAI Attributes 
+
 | SAI Profile Value            | SAI Data Type | Description                                                                                                    |
 | ---------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------- |
 | SAI_KEY_WARM_BOOT_WRITE_FILE | string        | The filepath that SAI will use when generating the dump to restore from later on in the *new-life*.            |
 | SAI_KEY_WARM_BOOT_READ_FILE  | boolean       | The filepath where generated SAI dump is located that SAI will use when restoring its state in the *new-life*. |
 | SAI_BOOT_TYPE                | integer       | Indicates to SAI which boot type it is. 0 - cold boot, 1 - fast boot, 2 - warm boot.                           |
+
+<!-- omit in toc -->
+###### Table 2. SAI Profile keys 
 
 ## LibSAI/Application flow
 
@@ -285,19 +286,8 @@ SONiC appends an additional kernel parameter *SONIC_BOOT_TYPE* and sets its valu
 
 The relevant source code - [warm-reboot](https://github.com/sonic-net/sonic-utilities/blob/master/scripts/fast-reboot).
 
-## Application warm restart state machine
 
-The state machine is described as follows:
-
-```mermaid
-stateDiagram
-    [*] --> initialized
-
-    initialized --> restored
-    restored --> reconciled
-    reconciled --> initialized
-    initialized --> reconciled
-```
+## Application warm restart configuration and state
 
 At start of the warm boot procedure most of the daemons set their state to *initialized*.
 
@@ -310,8 +300,21 @@ Once, the warm restart is executed again, the state transition *reconciled* -> *
 
 Some application skip *restored* state and directly transitions into *reconciled* state from *initialized*.
 
-## Application warm restart configuration and state
+The state machine is described as follows:
 
+```mermaid
+stateDiagram
+    [*] --> initialized
+
+    initialized --> restored
+    restored --> reconciled
+    reconciled --> initialized
+    initialized --> reconciled
+```
+<!-- omit in toc -->
+###### Figure 4. Application warm restart states
+
+<!-- omit in toc -->
 ### WARM_RESTART_ENABLE_TABLE
 
 In order for all the other services to understand that the system is in transient state performing warm restart a special configuration table exists in CFG DB
@@ -328,6 +331,7 @@ enable              = "true" / "false"  ; Default value as false.
 
 The warm boot aware daemons are reading the CFG DB table and understand wether they are in a warm start process by looking at either the name of the feature they are part of or "system" key in *WARM_RESTART_ENABLE_TABLE*.
 
+<!-- omit in toc -->
 ### WARM_RESTART_TABLE
 
 They are recording the state of the warm start procedure in the STATE DB table called *WARM_RESTART_TABLE*:
@@ -369,7 +373,7 @@ Syncd start script inside syncd container *syncd_start.sh* determines the reboot
 Essentially there will be two views created for warm restart. The current view represents the ASIC state before shutdown, temp view represents the new intended ASIC state after restart.
 Based on the SAI object data model, each view is a directed acyclic graph, all objects are linked together.
 
-<!-- omit-in-toc -->
+<!-- omit in toc -->
 #### View comparison logic
 
 Utilizing the meta data of object, with those invariants as anchor points, for each object in temp view, it starts as root of a tree and go down to all layer of children node until leaf to find best match.
@@ -387,14 +391,14 @@ Orchagent sends INIT_VIEW to syncd at start, syncd creates a temporary view and 
 In fast-fast boot mode, syncd does not create a temporary view, instead all SAI calls from orchagent are executed immediately.
 At the end of configuration restoration, orchagent sends APPLY_VIEW. Syncd uses APPLY_VIEW event as an indication of configuration end and sets switch attribute SAI_SWITCH_ATTR_FAST_API_ENABLE=false and LibSAI switches the ASIC banks.
 
-#### SWSS common APIs
+## SWSS common APIs
 
 1. [WarmStart](https://github.com/sonic-net/sonic-swss-common/blob/master/common/warm_restart.h) 
 provides methods to get/set application warm state, timers, check if the application currently starts in warm-restart or system warm-reboot mode, etc. Available for Python via swig bindings.
 2. [AppRestartAssist](https://github.com/sonic-net/sonic-swss/blob/master/warmrestart/warmRestartAssist.h) wraps WarmStart class and provides higher level APIs for getting/setting application warm start state as well as provides an interface to help perform reconciliation.
 
 
-#### Orchagent
+## Orchagent
 
 Orchagent translates the configuration in APP DB and partially CFG DB into SAIRedis API calls which are then sent to syncd daemon and translated to actual SAI calls.
 
@@ -444,6 +448,8 @@ sequenceDiagram
     end
 
 ```
+<!-- omit in toc -->
+###### Figure 5. Orchagent shutdown 
 
 The main operation of orchagent warm-boot startup consists of:
 1. Call Orch::bake() on all Orch to refill internal task queue - *m_toSync* with data from APPL_DB/CFG_DB
@@ -533,8 +539,10 @@ sequenceDiagram
     deactivate syncd
      Note right of orchagent: Warm start flow is finished, continue to operate in normal mode
 ```
+<!-- omit in toc -->
+###### Figure 6. Orchagent startup 
 
-#### Neighbor reconciliation flow
+## Neighbors
 
 Neighbors configuration is a crucial part of the L3 switch software. It is required that the neighbor configuration on the hardware is in sync with the actual switch neighbors on the network.
 It can't be assumed that neighbors won't change during warm restart window, while the software is restarting, the SONiC switch software has to be ready for scenarios in which during the restart window:
@@ -618,8 +626,10 @@ sequenceDiagram
 
     deactivate neighsyncd
 ```
+<!-- omit in toc -->
+###### Figure 7. Neighbors reconciliation
 
-#### Teamd
+## Teamd
 
 Teamd user space process implements the LACP protocol. LACP is fully supported by SONiC including the warm-reboot functionality.
 The upstream teamd implementation, unfortunately, does not implement warm restart capabilities, so SONiC has [patched](https://github.com/sonic-net/sonic-buildimage/blob/master/src/libteam/patch/0008-libteam-Add-warm_reboot-mode.patch) teamd which implement
@@ -639,6 +649,7 @@ To implement the shutdown process teamd handles SIGUSR1 signal as the indication
 Teamd warm restart only works in case LACP slow mode is configured. In slow LACP mode, we have 90 sec (3 * 30s LACP slow period)
 to start again otherwise the peer will reset the LAG causing disruption of traffic. So, *fast* LACP mode is not supported for warm restart.
 
+<!-- omit in toc -->
 #### Teamd warm restart flow
 
 ```mermaid
@@ -663,6 +674,8 @@ sequenceDiagram
     deactivate teamd
 
 ```
+<!-- omit in toc -->
+###### Figure 7. Teamd shutdown 
 
 ```mermaid
 sequenceDiagram
@@ -687,8 +700,11 @@ sequenceDiagram
     
     deactivate teamd
 ```
+<!-- omit in toc -->
+###### Figure 8. Teamd startup 
 
 
+<!-- omit in toc -->
 #### Teamd reconciliation flow
 
 During the warm restart window the peer of the LAG can go down or one of peers LAG members may go down. The network state must be reconciled with the state of the ASIC.
@@ -727,9 +743,11 @@ sequenceDiagram
 
     deactivate teamsyncd
 ```
+<!-- omit in toc -->
+###### Figure 9. Teamsyncd reconciliation 
 
-#### BGP
-
+## BGP
+is dIn
 FRR suite supports Graceful Restart and EOR capabilities:
 - https://datatracker.ietf.org/doc/html/rfc4724
 
@@ -759,6 +777,7 @@ The following FRR configuration is required to support warm-reboot:
 
 These settings are only configured in FRR when DEVICE_METADATA field "type" is set to "ToRRouter".
 
+<!-- omit in toc -->
 ##### FPM sync daemon reconciliation flow
 
 ```mermaid
@@ -818,8 +837,10 @@ sequenceDiagram
     STATE_DB -->> fpmsyncd: 
     deactivate STATE_DB
 ```
+<!-- omit in toc -->
+###### Figure 10. Fpmsyncd reconciliation 
 
-## Management plane containers
+## Management plane
 
 Management plane services, including:
 - telemetry
@@ -829,12 +850,14 @@ Management plane services, including:
 And more, are delayed by the systemd timer by 3m and 30 seconds since Linux kernel boot. This time is enough for critical services to start first.
 The main idea behind delaying these services is mostly to free CPU time for more important services at boot.
 
-## ARP/NDP helper
+## Control plane assistant (CPA)
 
 This is an additional configuration done before warm reboot User optionally passes an IP of the control plane assistant to warm-reboot command
 It consists of mirroring configuration for ARP/NDP packets and VXLAN configuration for ARP/NDP replies this configuration is removed after warm reboot finishes by the warm-reboot finalizer.
 
 ![Control Plane Assistant](img/control-plane-assistant.png)
+<!-- omit in toc -->
+###### Figure 11. Control Plane Assistant 
 
 Example configuration that is applied by neighbor_advertiser script:
 
@@ -868,4 +891,88 @@ Example configuration that is applied by neighbor_advertiser script:
 
 ## Warm Boot finalizer
 
+Every warm boot aware application is writing it’s state to STATE DB WARM_RESTART_TABLE *warmboot-finalizer.service* is a systemd service that starts *finalize-warmboot.sh* script on boot and waits until all services reach “reconciled” state. Once they do, this service performs a cleanup: disables warm-restart in CONFIG_DB, removes control plane configuration if it is present and saves configuration to */etc/sonic/config_db.json*.
+
+Once this service finished, the warm-boot process is completed. Many applications, automation/test scripts use *systemctl is-active warmboot-finalizer.service* to determine whether warm-reboot is still in progress.
+
+```mermaid
+sequenceDiagram
+    participant fw as finalize-warmboot.sh
+    participant STATE_DB
+    participant CFG_DB
+    participant s as /etc/sonic/config_db.json
+
+    activate fw
+
+    loop for each component
+        fw -->> STATE_DB: read component state
+        activate STATE_DB
+        STATE_DB -->> fw: 
+
+        opt All components reached reconciled state?
+            fw -->> fw: end loop
+        end
+
+        deactivate STATE_DB
+    end
+
+    fw -->> CFG_DB: Remove CPA configuration
+    activate CFG_DB
+    CFG_DB -->> fw: 
+    deactivate CFG_DB
+
+    deactivate fw
+
+    fw -->> CFG_DB: Save configuration
+    activate CFG_DB
+    CFG_DB ->> s: 
+    CFG_DB -->> fw: 
+    deactivate CFG_DB
+```
+<!-- omit in toc -->
+###### Figure 12. Warmboot finalizer 
+
 ## System flow
+
+TODO:
+
+<!-- omit in toc -->
+###### going down path
+
+- stop bgp docker 
+  - enable bgp graceful restart
+  - same as fast-reboot
+- stop teamd docker
+  - stop teamd gracefully to allow teamd to send last valid update to be sure we'll have 90 seconds reboot time available.
+- stop swss docker
+  - disable mac learning and aging
+  - freeze orchagent
+  - set redis flag WARM_RESTART_TABLE:system
+  - kill swss dockers
+- save the APPL_DB and asic db into the files.
+  - save the whole Redis database into ```/host/warmboot/dump.rdb```
+- stop syncd docker
+  - warm shutdown
+  - save the SAI states in ```/host/warmboot/sai-warmboot.bin```
+  - kill syncd docker
+- stop database
+- use kexec to reboot, plus one extra kernel argument
+
+<!-- omit in toc -->
+# going up path
+
+- Use kernel argument ```SONIC_BOOT_TYPE=warm``` to determine in warm starting mode
+- start database
+  - recover redis from ```/host/warmboot/*.json```
+  - implemented in database system service
+- start syncd docker
+  - implemented inside syncd docker
+  - recover SAI state from ```/host/warmboot/sai-warmboot.bin``` 
+  - the host interface will be also recovered.
+- start swss docker
+  - orchagent will wait till syncd has been started to do init view.
+  - will read from APP DB and do comparison logic.
+- start teamd docker
+  - at the same time as swss docker. swss will not read teamd app db until it finishes the comparison logic.
+- start bgp docker
+  - at the same time as swss docker. swss will not read bgp route table until it finishes the comparison logic.
