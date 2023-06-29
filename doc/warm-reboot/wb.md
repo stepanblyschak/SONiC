@@ -5,19 +5,18 @@
 ## Table of Content
 
 - [LibSAI](#libsai)
-- [LibSAI/Controller Application flow](#libsaicontroller-application-flow)
-- [Linux Restart](#linux-restart)
+- [LibSAI/Application flow](#libsaiapplication-flow)
 - [Persistent Location](#persistent-location)
+- [Database](#database)
+- [Linux Restart](#linux-restart)
 - [Application warm restart state machine](#application-warm-restart-state-machine)
 - [Application warm restart configuration and state](#application-warm-restart-configuration-and-state)
   - [WARM\_RESTART\_ENABLE\_TABLE](#warm_restart_enable_table)
   - [WARM\_RESTART\_TABLE](#warm_restart_table)
-- [Database](#database)
 - [SYNCD](#syncd)
-  - [SYNCD Views on Warm Boot Flow](#syncd-views-on-warm-boot-flow)
-  - [SYNCD View Comparison Logic](#syncd-view-comparison-logic)
-  - [SYNCD Views on Fast Fast Boot Flow](#syncd-views-on-fast-fast-boot-flow)
-  - [SYNCD system flow](#syncd-system-flow)
+  - [SYNCD in Warm Boot Flow](#syncd-in-warm-boot-flow)
+    - [View comparison logic](#view-comparison-logic)
+  - [SYNCD in Fast Fast Boot](#syncd-in-fast-fast-boot)
     - [SWSS common APIs](#swss-common-apis)
     - [Orchagent](#orchagent)
     - [Neighbor reconciliation flow](#neighbor-reconciliation-flow)
@@ -100,7 +99,7 @@ The restart of teamd should not cause link flapping or any traffic loss. All lag
 
 - Keep data plane running while software restarts, in a *happy* path (no network state changes occurred during the restart window) none of the data packets are dropped nor black holed.
 - In case the network state changes have occurred during the restart window, the software and hardware states have to become in sync with the network state eventually.
-- The control plane downtime is not exceeding the 90 seconds downtime limit.
+- The control plane downtime is not exceeding the 90 seconds downtime limit. 90 seconds is a strict requirement for teamd restoration to keep LAGs running LACP active on the peers.
 - The management plane downtime has relaxed requirements but usually management services (telemetry, SNMP, etc.) restart in less than 5 minutes.
 
 ### Architecture Design
@@ -145,89 +144,132 @@ SAI API has support for planned warm restart. The API provides a set of attribut
 | SAI_KEY_WARM_BOOT_READ_FILE  | boolean       | The filepath where generated SAI dump is located that SAI will use when restoring its state in the *new-life*. |
 | SAI_BOOT_TYPE                | integer       | Indicates to SAI which boot type it is. 0 - cold boot, 1 - fast boot, 2 - warm boot.                           |
 
-## LibSAI/Controller Application flow
+## LibSAI/Application flow
+
+This sections describes the general SAI client application flows to perform warm/fast-fast restarts.
+
+The below shows the shutdown process starting from a regular cold booted SAI and is applicable to both warm and fast-fast restarts:
 
 ```mermaid
 sequenceDiagram
-    Controller->>LibSAI: sai_api_initialize() with <br/>SAI_KEY_WARM_BOOT_WRITE_FILE=<dump-filepath> <br/> SAI_BOOT_TYPE=0 (cold boot)
+    App->>LibSAI: sai_api_initialize() with <br/>SAI_KEY_WARM_BOOT_WRITE_FILE=<dump-filepath> <br/> SAI_BOOT_TYPE=0 (cold boot)
     activate LibSAI
-    activate Controller
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    activate App
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
-    Controller->>LibSAI: sai_switch_api->create_switch()
-    activate Controller
+    deactivate App
+    App->>LibSAI: sai_switch_api->create_switch()
+    activate App
     activate LibSAI
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
-    Note right of Controller: Regular ASIC configuration through SAI API
-    Controller-->LibSAI: 
-     Note right of Controller: Controller decides to perform planned warm restart
-    Controller->>LibSAI: sai_switch_api->set_switch_attribute() <br/> SAI_SWITCH_ATTR_PRE_SHUTDOWN=true
+    deactivate App
+    Note right of App: Regular ASIC configuration through SAI API
+    App-->LibSAI: 
+     Note right of App: App decides to perform planned warm restart
+    App->>LibSAI: sai_switch_api->set_switch_attribute() <br/> SAI_SWITCH_ATTR_PRE_SHUTDOWN=true
     activate LibSAI
-    activate Controller
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    activate App
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
-    Controller->>LibSAI: sai_switch_api->set_switch_attribute() <br/> SAI_SWITCH_ATTR_RESTART_WARM=true
+    deactivate App
+    App->>LibSAI: sai_switch_api->set_switch_attribute() <br/> SAI_SWITCH_ATTR_RESTART_WARM=true
     activate LibSAI
-    activate Controller
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    activate App
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
-    Controller->>LibSAI: sai_switch_api->remove_switch()
+    deactivate App
+    App->>LibSAI: sai_switch_api->remove_switch()
     activate LibSAI
-    activate Controller
-    LibSAI-)Controller: SAI_STATUS_SUCCESS 
+    activate App
+    LibSAI-)App: SAI_STATUS_SUCCESS 
     deactivate LibSAI
-    deactivate Controller
+    deactivate App
 ```
+<!-- omit in toc -->
+###### Figure 1. SAI warm shutdown procedure
+
+Then, after restart the initialization part requires to pass SAI_BOOT_TYPE=2 into the SAI profile map to let SAI know to restore from a dump.
+After switch is created all ASIC related configurations (with exception of host interfaces, etc.) are available as they were prior to boot:
 
 ```mermaid
 sequenceDiagram
-    Controller->>LibSAI: sai_api_initialize() with <br/>SAI_KEY_WARM_BOOT_READ_FILE=<dump-filepath> <br/> SAI_BOOT_TYPE=2 (warm boot)
+    App->>LibSAI: sai_api_initialize() with <br/>SAI_KEY_WARM_BOOT_READ_FILE=<dump-filepath> <br/> SAI_BOOT_TYPE=2 (warm boot)
     activate LibSAI
-    activate Controller
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    activate App
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
-    Controller->>LibSAI: sai_switch_api->create_switch()
+    deactivate App
+    App->>LibSAI: sai_switch_api->create_switch()
     activate LibSAI
-    activate Controller
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    activate App
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
+    deactivate App
      Note left of LibSAI: LibSAI state is restored and in sync with ASIC
-     Note right of Controller: Controller continues to operate in a regular mode. <br/> Controller is now required to propagate the <br/> differences occurred in the network state during <br/> restart window down to the ASIC. <br/> E.g. Delete stale routes, program newly advertised routes, etc.
+     Note right of App: App continues to operate in a regular mode. <br/> App is now required to propagate the <br/> differences occurred in the network state during <br/> restart window down to the ASIC. <br/> E.g. Delete stale routes, program newly advertised routes, etc.
 ```
+
+<!-- omit in toc -->
+###### Figure 2. SAI warm startup procedure
+
+In the fast-fast boot SAI is also initialized with SAI_BOOT_TYPE=2, but requires to re-play the configuration into the new bank.
+One configuration is done, application should set switch attribute SAI_SWITCH_ATTR_FAST_API_ENABLE=false to signal LibSAI to switch to the new bank:
 
 ```mermaid
 sequenceDiagram
-    Controller->>LibSAI: sai_api_initialize() with <br/>SAI_KEY_WARM_BOOT_READ_FILE=<dump-filepath> <br/> SAI_BOOT_TYPE=2 (warm boot)
+    App->>LibSAI: sai_api_initialize() with <br/>SAI_KEY_WARM_BOOT_READ_FILE=<dump-filepath> <br/> SAI_BOOT_TYPE=2 (warm boot)
     activate LibSAI
-    activate Controller
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    activate App
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
-    Controller->>LibSAI: sai_switch_api->create_switch()
+    deactivate App
+    App->>LibSAI: sai_switch_api->create_switch()
     activate LibSAI
-    activate Controller
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    activate App
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
+    deactivate App
      Note left of LibSAI: LibSAI requires to replay the configuration on platform which implement fast-fast boot
-     Note right of Controller: Regular ASIC configuration through SAI API
-    Controller->>LibSAI: sai_switch_api->set_switch_attribute() <br/> SAI_SWITCH_ATTR_FAST_API_ENABLE=false
+     Note right of App: Regular ASIC configuration through SAI API
+    App->>LibSAI: sai_switch_api->set_switch_attribute() <br/> SAI_SWITCH_ATTR_FAST_API_ENABLE=false
     activate LibSAI
-    activate Controller
-     Note right of Controller: Controller tells LibSAI that new configuration is pushed to the hardware and LibSAI can switch to the new bank.
-    LibSAI-)Controller: SAI_STATUS_SUCCESS
+    activate App
+     Note right of App: App tells LibSAI that new configuration is pushed to the hardware and LibSAI can switch to the new bank.
+    LibSAI-)App: SAI_STATUS_SUCCESS
     deactivate LibSAI
-    deactivate Controller
-    Controller-->LibSAI: 
-     Note right of Controller: Controller continues to operate in a regular mode. Warm restart has finished
+    deactivate App
+    App-->LibSAI: 
+     Note right of App: App continues to operate in a regular mode. Warm restart has finished
 ```
+
+<!-- omit in toc -->
+###### Figure 3. SAI fast-fast startup procedure
+
+## Persistent Location
+
+A lot of components will require to save a dump of the state into a persistent location. In particular LibSAI/SDK dumps and SONiC DB dump.
+In SONiC this location is */host/warmboot/* directory.
+This location does not only persist across SONiC restarts but also persists across SONiC upgrades allowing the new SONiC image version to warm boot
+from a dump saved by the old SONiC image version.
+
+
+## Database
+
+Database is a crucial component of the SONiC switch software. It does not support warm restarting individually, only together with all other SONiC services.
+Database is the first service that starts in SONiC boot process. It is required to distinguish between different boot types and act respectively.
+
+In shutdown phase the dump of the database is performed and the dump is saved into a persistent location - */host/warmboot/dump.rdb*.
+
+In **fast-fast** boot scenario the ASIC DB is flushed since we are going to reprogram the a non active bank in the ASIC as well as some of the counters are not persistent across reboots
+and will be recreated, like flow counters, ACL counters, etc., while other counters will be just repopulated after system starts, like port counters.
+
+For both types of hardware implementations of warm reboot, most of the content of STATE DB is flushed except of few tables which are used to correctly restore the state after reboot.
+What kind of tables are dumped from the STATE DB depends on the application and its restoration logic. For example:
+- orchagent requires to know the pre-boot mirror session state (whether active or not) to understand whether to program the mirror session on the hardware or not
+- WARM_RESTART_TABLE has to be persistent by its definition.
+
+At boot, the *database.sh* start script determines wether the boot type is either *warm* or *fast-fast* and if so and the dump exists, loads the data from */host/warmboot/dump.rdb*, otherwise falls back to cold boot. *db-migrator.py* is executed to make sure the data in DB is aligned to the latest DB schema.
 
 ## Linux Restart
 
@@ -239,23 +281,9 @@ executing it immediately. This avoids the long times associated with a full rebo
 
 SONiC warm reboot leverages *kexec* Linux kernel functionality to perform warm reboot.
 
-SONiC additionally appends an additional kernel parameter *SONIC_BOOT_TYPE* so that in the *new-life* the software knows that the warm reboot was done and act respectively.
+SONiC appends an additional kernel parameter *SONIC_BOOT_TYPE* and sets its value to either "warm" or "fastfast" depending on the kind of HW implementation the platform supports. Using that parameter in the *new-life* the software knows that the warm reboot was done by looking at */proc/cmdline* and act respectively, though this kernel parameter should be used only once by *database.sh* to known whether to load the dump of the DB. Later, applications can read ```WARM_RESTART_TABLE``` to figure out the boot type.
 
-Example how SONiC loads and runs new kernel:
-
-```bash
-BOOT_OPTIONS += "SONIC_BOOT_TYPE=warm"
-# Load new kernel
-/sbin/kexec -l "$KERNEL_IMAGE" --initrd="$INITRD" --append="$BOOT_OPTIONS"
-# Execute the actual reboot
-/sbin/kexec -e
-```
-
-## Persistent Location
-
-A lot of components will require to save a dump of the state into a persistent location. In SONiC this location is */host/warmboot/* directory.
-This location does not only persist across SONiC restarts but also persists across SONiC upgrades allowing the new SONiC image version to warm boot
-from a dump saved by the old SONiC image version.
+The relevant source code - [warm-reboot](https://github.com/sonic-net/sonic-utilities/blob/master/scripts/fast-reboot).
 
 ## Application warm restart state machine
 
@@ -328,68 +356,36 @@ state           = "initialized" / "restored" / "reconciled"  ; initialized: init
                                                              ;
                                                              ; reconciled: process reconciled 'old' and 'new'
                                                              ; state collected in 'restored' phase. Examples:
-                                                             ; dynanic data like port state, neighbor, routes
+                                                             ; dynamic data like port state, neighbor, routes
                                                              ; and so on.
-```
-
-## Database
-
-Database is a crucial component of the SONiC switch software. It does not support warm restarting individually, only together with all other SONiC services.
-Database is the first service that starts in SONiC boot process. It requires to distinguish between different boot types and act respectively.
-
-On shutdown phase the dump of the database is performed and the dump is saved into a persistent location:
-
-```mermaid
-flowchart
-    A[User requested warm-reboot] --> B{Platform implementing<br/> fast-fast boot?}
-    B -- Yes --> C[Flush ASIC DB<br/> COUNTERS DB<br/> FLEX_COUNTERS DB] --> F
-    B -- No --> F[Flush STATE DB except <br/> FDB_TABLE, MIRROR_SESSION_TABLE,<br/> WARM_RESTART_TABLE, etc.]
-    F  --> G[Dump Redis DB into /host/warmboot/dump.rdb]
-```
-
-In **fast-fast** boot scenario the ASIC DB is flushed since we are going to reprogram the a non active bank in the ASIC as well as some of the counters are not persistent across reboots
-and will be recreated, like flow counters, ACL counters, etc., while other counters will be just repopulated after system starts, like port counters.
-
-For both types of hardware implementations of warm reboot, most of the content of STATE DB is flushed except of few tables which are used to correctly restore the state after reboot.
-What kind of tables are dumped from the STATE DB depends on the application and its restoration logic. For example:
-- orchagent requires to know the pre-boot mirror session state (whether active or not) to understand whether to program the mirror session on the hardware or not
-- WARM_RESTART_TABLE has to be persistent by its definition.
-
-The boot up sequence looks like this:
-
-```mermaid
-flowchart
-    B{Linux kernel booted<br/> with SONIC_BOOT_TYPE=warm?}
-    B -- Yes --> C{/host/warmboot/dump.rdb<br/> exists?}
-    C -- No --> F
-    C -- Yes --> G[Load /host/warmboot/dump.rdb]
-    B -- No --> F[Cold boot flow]
 ```
 
 ## SYNCD
 
-Syncd determines the reboot cause and the reboot type using the following logic:
+Syncd start script inside syncd container *syncd_start.sh* determines the reboot cause and start syncd with either ```-t warm``` or ```-t fast-fast``` depending on *SONIC_BOOT_TYPE* kernel boot parameter.
 
+### SYNCD in Warm Boot Flow
 
-```mermaid
-flowchart TD
-    A[Syncd Start] --> B{"Started with #quot;-t warm#quot;?"}
-    B -- Yes --> C{Is this a first run?}
-    C -- No --> D[Warm Boot Flow]
-    C -- Yes --> F[Fast-Fast Boot Flow]
-    B -- No ----> E[Cold Boot Flow]
-```
-
-### SYNCD Views on Warm Boot Flow
-
-Essentially there are two views created for warm restart. The current view represents the ASIC state before shutdown, temp view represents the new intended ASIC state after restart.
+Essentially there will be two views created for warm restart. The current view represents the ASIC state before shutdown, temp view represents the new intended ASIC state after restart.
 Based on the SAI object data model, each view is a directed acyclic graph, all objects are linked together.
 
-### SYNCD View Comparison Logic
+<!-- omit-in-toc -->
+#### View comparison logic
 
-### SYNCD Views on Fast Fast Boot Flow
+Utilizing the meta data of object, with those invariants as anchor points, for each object in temp view, it starts as root of a tree and go down to all layer of children node until leaf to find best match.
+If no match is found, the object in temp view should be created, it is object CREATE operation.
+If best match is found, but there is attributes different between the object in temp view and current view, SET operation should be performed.
+Exact match yields Temp VID to Current VID translation, which also paves the way for upper layer comparison.
+All objects in current VIEW which have reference count 0 at the end should be deleted, REMOVE operation.
 
-### SYNCD system flow
+Temporary view is recorded in ASIC DB under table *TEMP_ASIC_STATE* and cleared after view transition
+
+Orchagent sends INIT_VIEW to syncd at start, syncd creates a temporary view and records new state, once orchagent sends APPLY_VIEW the difference between the current and the temporary view is pushed to the ASIC.
+
+### SYNCD in Fast Fast Boot
+
+In fast-fast boot mode, syncd does not create a temporary view, instead all SAI calls from orchagent are executed immediately.
+At the end of configuration restoration, orchagent sends APPLY_VIEW. Syncd uses APPLY_VIEW event as an indication of configuration end and sets switch attribute SAI_SWITCH_ATTR_FAST_API_ENABLE=false and LibSAI switches the ASIC banks.
 
 #### SWSS common APIs
 
@@ -838,9 +834,7 @@ The main idea behind delaying these services is mostly to free CPU time for more
 This is an additional configuration done before warm reboot User optionally passes an IP of the control plane assistant to warm-reboot command
 It consists of mirroring configuration for ARP/NDP packets and VXLAN configuration for ARP/NDP replies this configuration is removed after warm reboot finishes by the warm-reboot finalizer.
 
-<p align=center>
-<img src="img/control-plane-assistant.png" alt="Control Plane Assistant">
-</p>
+![Control Plane Assistant](img/control-plane-assistant.png)
 
 Example configuration that is applied by neighbor_advertiser script:
 
