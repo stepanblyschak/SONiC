@@ -959,7 +959,7 @@ TODO:
 - use kexec to reboot, plus one extra kernel argument
 
 <!-- omit in toc -->
-# going up path
+###### going up path
 
 - Use kernel argument ```SONIC_BOOT_TYPE=warm``` to determine in warm starting mode
 - start database
