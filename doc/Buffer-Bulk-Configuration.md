@@ -1,40 +1,155 @@
-# HLD Name #
+# Buffers Configuration using Bulk API #
 
-## Table of Content 
+## Table of Content
 
-### Revision  
+### Revision
 
-### Scope  
+### Scope
 
-This section describes the scope of this high-level design document in SONiC.
+The scope of the document is utilizing SAI bulk API to speed up buffers configuration in fast and warm reboot.
 
-### Definitions/Abbreviations 
+### Definitions/Abbreviations
 
-This section covers the abbreviation if any, used in this high-level design document and its definitions.
+| Definitions/Abbreviation | Description                             |
+| ------------------------ | --------------------------------------- |
+| ASIC                     | Application specific integrated circuit |
+| HW                       | Hardware                                |
+| SW                       | Software                                |
+| SWSS                     | Switch state service                    |
+| SYNCD                    | ASIC synchronization service            |
+| SAI                      | Switch Abstraction Interface            |
+| UT                       | Unit test                               |
 
-### Overview 
+### Overview
 
-The purpose of this section is to give an overview of high-level design document and its architecture implementation in SONiC. 
+SONiC starts supporting single ASIC switches with more and more data plane ports available. More HWSKUs with more ports become available, e.g. 256 ports.
+This raises a problem of SONiC scaling with the number of ports. Each port has some number of PGs and some number of queues per port depending on ASIC that needs to be configure.
+E.g. for 256 port system there could be 2048 PGs and 4096 queues to be configured. Given that there is a strict time requirements for fast-reboot and warm-reboot it is neccesary to
+configure all ports and all related port objects in time and keep that part optimized.
+
+Batching is a commonly used approach to speed up processing. It allows to minimize an overhead incured by ASIC Redis channel and allows for more efficient configuration processing at SAI level.
+SAI already supports it using bulk APIs. This design adds support for buffers configuration using bulk API as an optimization for fast and warm-reboot.
 
 ### Requirements
 
-This section list out all the requirements for the HLD coverage and exemptions (not supported) if any for this design.
+- Utilize bulk API for buffers configuration to improve configuration performance in fast and warm-reboot
+- Support both static and dynamic buffer model
+- Fallback to legacy per object API if SAI vendor does not implement or support bulk API
 
-### Architecture Design 
+### Restrictions/Limitations
 
-This section covers the changes that are required in the SONiC architecture. In general, it is expected that the current architecture is not changed.
-This section should explain how the new feature/enhancement (module/sub-module) fits in the existing architecture. 
+Buffer configuration in bulk is going to be restricted to fast and warm-boot only. In cold boot in dynamic mode the buffer configuration is generated during boot time and the APPL_DB
+is filled gradually. In this case, there's no practical way to bulk all configuration together, therefore in cold boot orchagent behaves exactly as today.
 
-If this feature is a SONiC Application Extension mention which changes (if any) needed in the Application Extension infrastructure to support new feature.
+In fast-reboot and warm-reboot, APPL_DB is already filled with buffer configuration saved from previous boot. This configuration is read all at once in ```bake()``` giving us the oportunity to batch configuration togather to syncd.
 
-### High-Level Design 
+### SAI API
+
+APIs that are available as of 1.15:
+
+| API | Attribute(s) |
+|-----|--------------|
+| set_ports_attribute | SAI_PORT_ATTR_QOS_INGRESS_BUFFER_PROFILE_LIST, SAI_PORT_ATTR_QOS_EGRESS_BUFFER_PROFILE_LIST |
+| set_ingress_priority_groups_attribute | SAI_INGRESS_PRIORITY_GROUP_ATTR_BUFFER_PROFILE |
+| set_queues_attribute | SAI_QUEUE_ATTR_BUFFER_PROFILE_ID |
+
+### Architecture Design
+
+N/A
+
+### High-Level Design
+
+```mermaid
+sequenceDiagram
+    participant APPL_DB
+    participant BufferOrch
+    participant Syncd
+    participant SAI
+
+    activate BufferOrch
+
+    rect rgba(0, 0, 0, 0.05)
+        note left of BufferOrch: bake
+
+        activate APPL_DB
+
+        BufferOrch-->>APPL_DB: read BUFFER_PG, BUFFER_QUEUE, PORT
+
+        APPL_DB-->>BufferOrch: return
+
+        deactivate APPL_DB
+    end
+
+
+    rect rgba(0, 0, 0, 0.05)
+        note left of BufferOrch: doTask
+
+        BufferOrch-->>BufferOrch: processPriorityGroup()
+        BufferOrch-->>BufferOrch: processQueue()
+        BufferOrch-->>BufferOrch: processIngressBufferProfileList()
+        BufferOrch-->>BufferOrch: processEgressBufferProfileList()
+
+        BufferOrch-->>BufferOrch: flush()
+
+        activate Syncd
+        activate SAI
+
+        BufferOrch-->>Syncd: set_ingress_priority_groups_attribute()
+
+        alt Bulk API supported
+            Syncd-->>SAI: set_ingress_priority_groups_attribute()
+            SAI-->>Syncd: return
+        else Legacy API
+            loop
+                Syncd-->>SAI: set_ingress_priority_group_attribute()
+                SAI-->>Syncd: return
+            end
+        end
+
+        Syncd->>BufferOrch: return
+
+        BufferOrch->>Syncd: set_queues_attribute()
+
+        alt Bulk API supported
+            Syncd-->>SAI: set_queues_attribute()
+            SAI-->>Syncd: return
+        else Legacy API
+            loop
+                Syncd-->>SAI: set_queue_attribute()
+                SAI-->>Syncd: return
+            end
+        end
+
+        Syncd->>BufferOrch: return
+
+        BufferOrch->>Syncd: set_ports_attribute()
+
+        alt Bulk API supported
+            Syncd-->>SAI: set_ports_attribute()
+            SAI-->>Syncd: return
+        else Legacy API
+            loop
+                Syncd-->>SAI: set_port_attribute()
+                SAI-->>Syncd: return
+            end
+        end
+
+        Syncd->>BufferOrch: return
+
+        deactivate SAI
+        deactivate Syncd
+
+    end
+
+    deactivate BufferOrch
+```
 
 This section covers the high level design of the feature/enhancement. This section covers the following points in detail.
-		
+
 	- Is it a built-in SONiC feature or a SONiC Application Extension?
 	- What are the modules and sub-modules that are modified for this design?
 	- What are the repositories that would be changed?
-	- Module/sub-module interfaces and dependencies. 
+	- Module/sub-module interfaces and dependencies.
 	- SWSS and Syncd changes in detail
 	- DB and Schema changes (APP_DB, ASIC_DB, COUNTERS_DB, LOGLEVEL_DB, CONFIG_DB, STATE_DB)
 	- Sequence diagram if required.
@@ -50,46 +165,40 @@ This section covers the high level design of the feature/enhancement. This secti
 	- Is this change specific to any platform? Are there dependencies for platforms to implement anything to make this feature work? If yes, explain in detail and inform community in advance.
 	- SAI API requirements, CLI requirements, ConfigDB requirements. Design is covered in following sections.
 
-### SAI API 
-
-This section covers the changes made or new API added in SAI API for implementing this feature. If there is no change in SAI API for HLD feature, it should be explicitly mentioned in this section.
-This section should list the SAI APIs/objects used by the design so that silicon vendors can implement the required support in their SAI. Note that the SAI requirements should be discussed with SAI community during the design phase and ensure the required SAI support is implemented along with the feature/enhancement.
-
-### Configuration and management 
-This section should have sub-sections for all types of configuration and management related design. Example sub-sections for "CLI" and "Config DB" are given below. Sub-sections related to data models (YANG, REST, gNMI, etc.,) should be added as required.
-If there is breaking change which may impact existing platforms, please call out in the design and get platform vendors reviewed. 
+### Configuration and management
+N/A
 
 #### Manifest (if the feature is an Application Extension)
+N/A
 
-Paste a preliminary manifest in a JSON format.
+#### CLI/YANG model Enhancements
+N/A
 
-#### CLI/YANG model Enhancements 
+#### Config DB Enhancements
+N/A
 
-This sub-section covers the addition/deletion/modification of CLI changes and YANG model changes needed for the feature in detail. If there is no change in CLI for HLD feature, it should be explicitly mentioned in this section. Note that the CLI changes should ensure downward compatibility with the previous/existing CLI. i.e. Users should be able to save and restore the CLI from previous release even after the new CLI is implemented. 
-This should also explain the CLICK and/or KLISH related configuration/show in detail.
-https://github.com/sonic-net/sonic-utilities/blob/master/doc/Command-Reference.md needs be updated with the corresponding CLI change.
+### Warmboot and Fastboot Design Impact
 
-#### Config DB Enhancements  
+This design optimizes buffers configuration during warm-boot and fast-boot.
 
-This sub-section covers the addition/deletion/modification of config DB changes needed for the feature. If there is no change in configuration for HLD feature, it should be explicitly mentioned in this section. This section should also ensure the downward compatibility for the change. 
-		
-### Warmboot and Fastboot Design Impact  
-Mention whether this feature/enhancement has got any requirements/dependencies/impact w.r.t. warmboot and fastboot. Ensure that existing warmboot/fastboot feature is not affected due to this design and explain the same.
+TODO: give time improvement data on VS.
 
 ### Memory Consumption
-This sub-section covers the memory consumption analysis for the new feature: no memory consumption is expected when the feature is disabled via compilation and no growing memory consumption while feature is disabled by configuration. 
-### Restrictions/Limitations  
+Batching implies increased memory usage in orchagent. The increased memory usage is relevant only for warm and fast boot flows where bulk API is utilized. Batch buffer for PG and QUEUE is using at most ```N * (number_of_pgs_per_port + number_of_queues_per_port) * sizeof(sai_attribute_t)``` additional bytes. (TODO: for port buffer lists)
 
-### Testing Requirements/Design  
-Explain what kind of unit testing, system testing, regression testing, warmboot/fastboot testing, etc.,
-Ensure that the existing warmboot/fastboot requirements are met. For example, if the current warmboot feature expects maximum of 1 second or zero second data disruption, the same should be met even after the new feature/enhancement is implemented. Explain the same here.
-Example sub-sections for unit test cases and system test cases are given below. 
+### Testing Requirements/Design
 
-#### Unit Test cases  
+- Regression testing
+- Warmboot/fastboot downtime testing
+
+#### Unit Test cases
+
+- Existing buffer configuration UT
+- UT
 
 #### System Test cases
 
-### Open/Action items - if any 
+- warm-reboot
+- fast-reboot
 
-	
-NOTE: All the sections and sub-sections given above are mandatory in the design document. Users can add additional sections/sub-sections if required.
+### Open/Action items - if any
