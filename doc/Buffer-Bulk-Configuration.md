@@ -61,9 +61,9 @@ N/A
 
 #### Syncd
 
-Syncd's ```Syncd::processBulkOidSet``` needs to be extended to support ```SAI_COMMON_API_BULK_SET``` in the same way create is implemented with a fallback to non-bulk API:
+Syncd's ```Syncd::processBulkOidSet``` needs to be extended to support ```SAI_COMMON_API_BULK_SET``` in the same way ```SAI_COMMON_API_BULK_CREATE``` is implemented with a fallback to non-bulk API:
 
-##### Figure 3. Syncd Bulk Set Flow
+##### Figure 1. Syncd Bulk Set Flow
 
 ```mermaid
 %%{
@@ -105,7 +105,57 @@ sequenceDiagram
 
 #### BufferOrch
 
+BufferOrch is design to process and execute configuration one by one. In order to simplify the design and code implementation all of the existing BufferOrch buisness logic needs to be preserved. However, instead of calling to SAI API directly BufferOrch will call to the ```BulkContext``` struct.
 
+The ```BulkContext``` can be configured to execute API immidiatelly for cold boot and record API call for fast and warm boot.
+At the end of fast or warm boot ```BufferOrch``` will call ```BulkContext``` flush to combine all API calls into a single SAI bulk API call.
+
+This design should be very similar to ```RouteOrch``` bulk usage design.
+
+Bulk API spec:
+
+```c++
+/**
+ * @brief Bulk objects set attributes.
+ *
+ * @param[in] object_count Number of objects to set on attribute
+ * @param[in] object_id List of object ids
+ * @param[in] attr_list List of attributes for every object, one per object.
+ * @param[in] mode Bulk operation error handling mode.
+ * @param[out] object_statuses List of status for every object. Caller needs to allocate the buffer.
+ *
+ * @return #SAI_STATUS_SUCCESS when set attributes on all objects succeeded or
+ * #SAI_STATUS_FAILURE when any of the objects fails to set attribute. When
+ * there is failure, Caller is expected to go through the list of returned
+ * statuses to find out which fails and which succeeds.
+ */
+typedef sai_status_t (*sai_bulk_object_set_attribute_fn)(
+        _In_ uint32_t object_count,
+        _In_ const sai_object_id_t *object_id,
+        _In_ const sai_attribute_t *attr_list,
+        _In_ sai_bulk_op_error_mode_t mode,
+        _Out_ sai_status_t *object_statuses);
+```
+
+The ```BulkContext``` is to be defined with the following data:
+
+```c++
+struct BulkContext
+{
+    std::vector<sai_object_id_t> oid;
+    std::vector<sai_status_t> statuses;
+    std::vector<SaiAttrWrapper> attr;
+};
+```
+
+The data is organized in rows, where each column represents a configuration for single OID. This data structure alignes with SAI Bulk API definition.
+
+#### BufferOrch Error Handling
+
+No change for cold boot. In fast and warm boot, the bulk API *must* succeed, if an error occurs it causes warm restore validation failure. Therefore ```BulkContext``` does not care about ```mode``` parameter and will check single return code returned by bulk call. Orchagent will exit on error.
+
+
+##### Figure 2. BufferOrch Fast/Warm Boot Flow
 ```mermaid
 %%{
   init: {
