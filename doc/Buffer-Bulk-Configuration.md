@@ -59,111 +59,127 @@ N/A
 
 ### High-Level Design
 
+#### Syncd
+
+Syncd's ```Syncd::processBulkOidSet``` needs to be extended to support ```SAI_COMMON_API_BULK_SET``` in the same way create is implemented with a fallback to non-bulk API:
+
+##### Figure 3. Syncd Bulk Set Flow
+
 ```mermaid
+%%{
+  init: {
+    "theme": "forest",
+    "sequence": {
+      "rightAngles": true,
+      "showSequenceNumbers": true
+    }
+  }
+}%%
 sequenceDiagram
-    participant APPL_DB
-    participant BufferOrch
+    participant ASIC_DB
     participant Syncd
     participant SAI
 
-    activate BufferOrch
+    ASIC_DB-->>Syncd: set_<object-type>s_attribute()
 
-    rect rgba(0, 0, 0, 0.05)
-        note left of BufferOrch: bake
+    activate Syncd
 
-        activate APPL_DB
+    Syncd-->>SAI: set_<object-type>s_attribute()
+    activate SAI
+    SAI-->>Syncd: return status
+    deactivate SAI
+
+    alt status is NOT_IMPLEMENTED or NOT_SUPPORTED
+        loop oid
+            Syncd-->>SAI: set_<object-type>s_attribute()
+            activate SAI
+            SAI-->>Syncd: return status
+            deactivate SAI
+        end
+    else else
+        Syncd-->>ASIC_DB: return status
+    end
+
+    deactivate Syncd
+```
+
+#### BufferOrch
+
+
+```mermaid
+%%{
+  init: {
+    "theme": "forest",
+    "sequence": {
+      "rightAngles": true,
+      "showSequenceNumbers": true
+    }
+  }
+}%%
+sequenceDiagram
+    participant APPL_DB
+    participant OrchDaemon
+    participant BufferOrch
+    participant Syncd
+
+    activate OrchDaemon
+
+    rect rgba(0, 0, 0, 0.0)
+
+        OrchDaemon-->>BufferOrch: bake()
+
+        activate BufferOrch
 
         BufferOrch-->>APPL_DB: read BUFFER_PG, BUFFER_QUEUE, PORT
+        activate APPL_DB
+
 
         APPL_DB-->>BufferOrch: return
 
+        BufferOrch-->>OrchDaemon: return
+
         deactivate APPL_DB
+        deactivate BufferOrch
     end
 
 
-    rect rgba(0, 0, 0, 0.05)
-        note left of BufferOrch: doTask
+    rect rgba(0, 0, 0, 0.0)
+        OrchDaemon-->>BufferOrch: doTask()
 
+        activate BufferOrch
         BufferOrch-->>BufferOrch: processPriorityGroup()
+
         BufferOrch-->>BufferOrch: processQueue()
         BufferOrch-->>BufferOrch: processIngressBufferProfileList()
         BufferOrch-->>BufferOrch: processEgressBufferProfileList()
 
         BufferOrch-->>BufferOrch: flush()
 
-        activate Syncd
-        activate SAI
 
         BufferOrch-->>Syncd: set_ingress_priority_groups_attribute()
-
-        alt Bulk API supported
-            Syncd-->>SAI: set_ingress_priority_groups_attribute()
-            SAI-->>Syncd: return
-        else Legacy API
-            loop
-                Syncd-->>SAI: set_ingress_priority_group_attribute()
-                SAI-->>Syncd: return
-            end
-        end
+        activate Syncd
 
         Syncd->>BufferOrch: return
-
-        BufferOrch->>Syncd: set_queues_attribute()
-
-        alt Bulk API supported
-            Syncd-->>SAI: set_queues_attribute()
-            SAI-->>Syncd: return
-        else Legacy API
-            loop
-                Syncd-->>SAI: set_queue_attribute()
-                SAI-->>Syncd: return
-            end
-        end
-
-        Syncd->>BufferOrch: return
-
-        BufferOrch->>Syncd: set_ports_attribute()
-
-        alt Bulk API supported
-            Syncd-->>SAI: set_ports_attribute()
-            SAI-->>Syncd: return
-        else Legacy API
-            loop
-                Syncd-->>SAI: set_port_attribute()
-                SAI-->>Syncd: return
-            end
-        end
-
-        Syncd->>BufferOrch: return
-
-        deactivate SAI
         deactivate Syncd
 
+        BufferOrch->>Syncd: set_queues_attribute()
+        activate Syncd
+        Syncd->>BufferOrch: return
+        deactivate Syncd
+
+        BufferOrch->>Syncd: set_ports_attribute()
+        activate Syncd
+        Syncd->>BufferOrch: return
+
+        deactivate Syncd
+
+        BufferOrch-->>OrchDaemon: return
+
+        deactivate BufferOrch
     end
 
-    deactivate BufferOrch
+    deactivate OrchDaemon
 ```
-
-This section covers the high level design of the feature/enhancement. This section covers the following points in detail.
-
-	- Is it a built-in SONiC feature or a SONiC Application Extension?
-	- What are the modules and sub-modules that are modified for this design?
-	- What are the repositories that would be changed?
-	- Module/sub-module interfaces and dependencies.
-	- SWSS and Syncd changes in detail
-	- DB and Schema changes (APP_DB, ASIC_DB, COUNTERS_DB, LOGLEVEL_DB, CONFIG_DB, STATE_DB)
-	- Sequence diagram if required.
-	- Linux dependencies and interface
-	- Warm reboot requirements/dependencies
-	- Fastboot requirements/dependencies
-	- Scalability and performance requirements/impact
-	- Memory requirements
-	- Docker dependency
-	- Build dependency if any
-	- Management interfaces - SNMP, CLI, RestAPI, etc.,
-	- Serviceability and Debug (logging, counters, trace etc) related design
-	- Is this change specific to any platform? Are there dependencies for platforms to implement anything to make this feature work? If yes, explain in detail and inform community in advance.
-	- SAI API requirements, CLI requirements, ConfigDB requirements. Design is covered in following sections.
 
 ### Configuration and management
 N/A
