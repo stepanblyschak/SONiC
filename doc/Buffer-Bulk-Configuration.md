@@ -262,6 +262,8 @@ sequenceDiagram
 
 #### Logging and debuggubility
 
+SAI Bulk operations and time they took is logged.
+
 ### Configuration and management
 N/A
 
