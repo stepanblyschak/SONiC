@@ -1,6 +1,35 @@
+<!-- omit in toc -->
 # Buffers Configuration using Bulk API #
 
+<!-- omit in toc -->
 ## Table of Content
+
+- [Revision](#revision)
+- [Scope](#scope)
+- [Definitions/Abbreviations](#definitionsabbreviations)
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Restrictions/Limitations](#restrictionslimitations)
+- [SAI API](#sai-api)
+- [Architecture Design](#architecture-design)
+- [High-Level Design](#high-level-design)
+  - [Syncd](#syncd)
+    - [Figure 1. Syncd Bulk Set Flow](#figure-1-syncd-bulk-set-flow)
+  - [BufferOrch](#bufferorch)
+  - [BufferOrch Error Handling](#bufferorch-error-handling)
+    - [Figure 2. BufferOrch Fast/Warm Boot Flow](#figure-2-bufferorch-fastwarm-boot-flow)
+  - [Logging and debuggubility](#logging-and-debuggubility)
+- [Configuration and management](#configuration-and-management)
+  - [Manifest (if the feature is an Application Extension)](#manifest-if-the-feature-is-an-application-extension)
+  - [CLI/YANG model Enhancements](#cliyang-model-enhancements)
+  - [Config DB Enhancements](#config-db-enhancements)
+- [Warmboot and Fastboot Design Impact](#warmboot-and-fastboot-design-impact)
+- [Memory Consumption](#memory-consumption)
+- [Testing Requirements/Design](#testing-requirementsdesign)
+  - [Unit Test cases](#unit-test-cases)
+  - [System Test cases](#system-test-cases)
+- [Open/Action items - if any](#openaction-items---if-any)
+
 
 ### Revision
 
@@ -23,8 +52,8 @@ The scope of the document is utilizing SAI bulk API to speed up buffers configur
 ### Overview
 
 SONiC starts supporting single ASIC switches with more and more data plane ports available. More HWSKUs with more ports become available, e.g. 256 ports.
-This raises a problem of SONiC scaling with the number of ports. Each port has some number of PGs and some number of queues per port depending on ASIC that needs to be configure.
-E.g. for 256 port system there could be 2048 PGs and 4096 queues to be configured. Given that there is a strict time requirements for fast-reboot and warm-reboot it is neccesary to
+This raises a problem of SONiC scaling with the number of ports. Each port has some number of PGs and some number of queues per port depending on ASIC that need to be configured.
+E.g. on 256 port system there could be 2048 PGs and 4096 queues to be configured. Given that there is a strict time requirements for fast-reboot and warm-reboot it is neccesary to
 configure all ports and all related port objects in time and keep that part optimized.
 
 Batching is a commonly used approach to speed up processing. It allows to minimize an overhead incured by ASIC Redis channel and allows for more efficient configuration processing at SAI level.
@@ -105,14 +134,7 @@ sequenceDiagram
 
 #### BufferOrch
 
-BufferOrch is design to process and execute configuration one by one. In order to simplify the design and code implementation all of the existing BufferOrch buisness logic needs to be preserved. However, instead of calling to SAI API directly BufferOrch will call to the ```BulkContext``` struct.
-
-The ```BulkContext``` can be configured to execute API immidiatelly for cold boot and record API call for fast and warm boot.
-At the end of fast or warm boot ```BufferOrch``` will call ```BulkContext``` flush to combine all API calls into a single SAI bulk API call.
-
-This design should be very similar to ```RouteOrch``` bulk usage design.
-
-Bulk API spec:
+SAI Bulk API spec:
 
 ```c++
 /**
@@ -137,6 +159,14 @@ typedef sai_status_t (*sai_bulk_object_set_attribute_fn)(
         _Out_ sai_status_t *object_statuses);
 ```
 
+BufferOrch is designed to process and execute configuration one by one. In order to simplify the design and code implementation all of the existing BufferOrch buisness logic needs to be preserved. However, instead of calling to SAI API directly BufferOrch will call to the ```BulkContext``` struct wich wraps SAI calls.
+
+The ```BulkContext``` can be configured to execute API immidiatelly for cold boot and record API call for fast and warm boot.
+At the end of fast or warm boot ```BufferOrch``` will call ```BulkContext``` flush to combine all API calls into a single SAI bulk API call.
+
+This design should be very similar to ```RouteOrch``` bulk usage design.
+
+
 The ```BulkContext``` is to be defined with the following data:
 
 ```c++
@@ -152,8 +182,7 @@ The data is organized in rows, where each column represents a configuration for 
 
 #### BufferOrch Error Handling
 
-No change for cold boot. In fast and warm boot, the bulk API *must* succeed, if an error occurs it causes warm restore validation failure. Therefore ```BulkContext``` does not care about ```mode``` parameter and will check single return code returned by bulk call. Orchagent will exit on error.
-
+No change for cold boot. In fast and warm boot, the bulk API *must* succeed, if an error occurs it causes warm restore validation failure. Therefore ```BulkContext``` does not care about ```mode``` parameter nor ```object_statuses``` and will check single return code provided by bulk call. Orchagent will exit on error leading to a cold recovery by auto restart functionality.
 
 ##### Figure 2. BufferOrch Fast/Warm Boot Flow
 ```mermaid
@@ -231,6 +260,8 @@ sequenceDiagram
     deactivate OrchDaemon
 ```
 
+#### Logging and debuggubility
+
 ### Configuration and management
 N/A
 
@@ -244,13 +275,11 @@ N/A
 N/A
 
 ### Warmboot and Fastboot Design Impact
-
-This design optimizes buffers configuration during warm-boot and fast-boot.
-
-TODO: give time improvement data on VS.
+This design optimizes buffers configuration during warm-boot and fast-boot. Expected improvement of ~40% faster buffer configuration, even with fallback to per object API at syncd.
+Results will highly depend on exact CPU/memory speed of the platform as well as SAI driver.
 
 ### Memory Consumption
-Batching implies increased memory usage in orchagent. The increased memory usage is relevant only for warm and fast boot flows where bulk API is utilized. Batch buffer for PG and QUEUE is using at most ```N * (number_of_pgs_per_port + number_of_queues_per_port) * sizeof(sai_attribute_t)``` additional bytes. (TODO: for port buffer lists)
+Batching implies increased transient memory usage in orchagent. The increased memory usage is relevant only for warm and fast boot flows where bulk API is utilized. Batch buffer for PG and QUEUE is using at most ```N * (number_of_pgs_per_port + number_of_queues_per_port) * sizeof(sai_attribute_t) + N * profiles_per_port * (sizeof(sai_attribute_t) + sizeof(sai_object_id_t))``` additional bytes. For 256 ports, 8 PGs, 16 queues and 3 port profiles ~300kb in orchagent. It's harder to predict memory spike in redis and needs to be tested once implementation is ready. Once the system finished configuration the memory usage should return to steady vlaues.
 
 ### Testing Requirements/Design
 
