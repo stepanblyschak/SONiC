@@ -120,7 +120,7 @@ sequenceDiagram
 
     alt status is NOT_IMPLEMENTED or NOT_SUPPORTED
         loop oid
-            Syncd-->>SAI: set_<object-type>s_attribute()
+            Syncd-->>SAI: set_<object-type>_attribute()
             activate SAI
             SAI-->>Syncd: return status
             deactivate SAI
@@ -291,7 +291,7 @@ Batching implies increased transient memory usage in orchagent. The increased me
 #### Unit Test cases
 
 - Existing buffer configuration UT
-- UT
+- New UT to test bulk API called correctly
 
 #### System Test cases
 
